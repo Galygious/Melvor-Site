@@ -3,99 +3,143 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Game Items Showcase</title>
-  <!-- Bootstrap CSS for quick, responsive styling -->
+  <title>Game Items Database</title>
+  <!-- Bootstrap CSS for styling -->
   <link
     href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
     rel="stylesheet"
   />
   <style>
-    body {
-      background-color: #f8f9fa;
-    }
-    .card-img-top {
-      height: 200px;
-      object-fit: cover;
+    /* Style the thumbnail images */
+    .thumb-img {
+      width: 50px;
+      height: auto;
     }
   </style>
 </head>
 <body>
   <div class="container py-4">
-    <h1 class="mb-4 text-center">Game Items Showcase</h1>
-    <div id="content"></div>
+    <h1 class="mb-4">Game Items Database</h1>
+    
+    <!-- Search input -->
+    <div class="mb-3">
+      <input
+        type="text"
+        id="searchInput"
+        class="form-control"
+        placeholder="Search items by name..."
+      />
+    </div>
+
+    <!-- Table container -->
+    <div class="table-responsive">
+      <table class="table table-striped table-bordered" id="itemsTable">
+        <thead class="table-dark">
+          <tr>
+            <th>Namespace</th>
+            <th>Image</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Category</th>
+            <th>Soul Points</th>
+            <th>Sell Price</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <!-- Rows will be added here dynamically -->
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <script>
-    // Fetch the JSON data (make sure items.json is hosted in the same directory)
+    // Helper function to create a table row for an item
+    function createTableRow(namespace, item) {
+      const tr = document.createElement('tr');
+
+      // Namespace column
+      const tdNamespace = document.createElement('td');
+      tdNamespace.textContent = namespace;
+      tr.appendChild(tdNamespace);
+
+      // Image column (using a thumbnail)
+      const tdImage = document.createElement('td');
+      if (item.image) {
+        const img = document.createElement('img');
+        img.src = item.image;
+        img.alt = item.name;
+        img.className = 'thumb-img';
+        tdImage.appendChild(img);
+      } else {
+        tdImage.textContent = 'N/A';
+      }
+      tr.appendChild(tdImage);
+
+      // Name column
+      const tdName = document.createElement('td');
+      tdName.textContent = item.name || 'N/A';
+      tr.appendChild(tdName);
+
+      // Type column
+      const tdType = document.createElement('td');
+      tdType.textContent = item.type || 'N/A';
+      tr.appendChild(tdType);
+
+      // Category column
+      const tdCategory = document.createElement('td');
+      tdCategory.textContent = item.category || 'N/A';
+      tr.appendChild(tdCategory);
+
+      // Soul Points column
+      const tdSoul = document.createElement('td');
+      tdSoul.textContent = item.soulPoints || 'N/A';
+      tr.appendChild(tdSoul);
+
+      // Sell Price column
+      const tdSellPrice = document.createElement('td');
+      let priceText = item.sellPrice ? item.sellPrice : 'N/A';
+      if (item.sellCurrency) {
+        priceText += " " + item.sellCurrency;
+      }
+      tdSellPrice.textContent = priceText;
+      tr.appendChild(tdSellPrice);
+
+      return tr;
+    }
+
+    // Load JSON data
     fetch('items.json')
       .then(response => response.json())
       .then(data => {
-        const contentDiv = document.getElementById('content');
+        const tableBody = document.getElementById('tableBody');
+        const allRows = [];
         
-        // Iterate over each namespace in your JSON
+        // Loop over each namespace and add its items as table rows
         for (const namespace in data) {
-          // Create a section for each namespace
-          const nsSection = document.createElement('section');
-          nsSection.classList.add('mb-5');
-          
-          // Namespace header
-          const nsHeader = document.createElement('h2');
-          nsHeader.textContent = namespace;
-          nsHeader.classList.add('mb-3', 'text-primary');
-          nsSection.appendChild(nsHeader);
-          
-          // Create a responsive row for items
-          const row = document.createElement('div');
-          row.className = 'row row-cols-1 row-cols-md-3 g-4';
-          
           const items = data[namespace];
           for (const itemId in items) {
             const item = items[itemId];
-            const col = document.createElement('div');
-            col.className = 'col';
-            
-            // Create a card for the item
-            const card = document.createElement('div');
-            card.className = 'card h-100';
-            
-            // Item image (ensure the paths are correct relative to your site)
-            const img = document.createElement('img');
-            img.className = 'card-img-top';
-            img.src = item.image;
-            img.alt = item.name;
-            card.appendChild(img);
-            
-            // Card body for item details
-            const cardBody = document.createElement('div');
-            cardBody.className = 'card-body';
-            
-            // Item name
-            const cardTitle = document.createElement('h5');
-            cardTitle.className = 'card-title';
-            cardTitle.textContent = item.name;
-            cardBody.appendChild(cardTitle);
-            
-            // Additional details (customize as needed)
-            const details = document.createElement('p');
-            details.className = 'card-text';
-            details.innerHTML = `
-              <strong>Type:</strong> ${item.type || 'N/A'}<br>
-              <strong>Category:</strong> ${item.category || 'N/A'}<br>
-              <strong>Soul Points:</strong> ${item.soulPoints || 'N/A'}<br>
-              <strong>Sell Price:</strong> ${item.sellPrice ? item.sellPrice : 'N/A'} ${item.sellCurrency ? item.sellCurrency : ''}
-            `;
-            cardBody.appendChild(details);
-            card.appendChild(cardBody);
-            
-            col.appendChild(card);
-            row.appendChild(col);
+            const row = createTableRow(namespace, item);
+            tableBody.appendChild(row);
+            allRows.push(row);
           }
-          
-          nsSection.appendChild(row);
-          contentDiv.appendChild(nsSection);
         }
+        
+        // Search functionality: filter table rows by item name
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('input', function () {
+          const query = searchInput.value.toLowerCase();
+          allRows.forEach(row => {
+            // The third cell contains the item name
+            const nameCell = row.children[2];
+            if (nameCell) {
+              const text = nameCell.textContent.toLowerCase();
+              row.style.display = text.includes(query) ? '' : 'none';
+            }
+          });
+        });
       })
-      .catch(err => console.error('Error loading JSON:', err));
+      .catch(error => console.error('Error loading JSON:', error));
   </script>
 </body>
 </html>
