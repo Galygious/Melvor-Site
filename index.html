@@ -306,28 +306,49 @@
         paginationContainer.appendChild(createPageButton(i));
       }
 
-      // Add wheel event listener for smooth scrolling
+      // Add touch and wheel event listeners for smooth scrolling
       const container = paginationContainer.parentElement;
+      let isDragging = false;
+      let startX = 0;
+      let touchScrollPos = 0;
+      const buttonWidth = 46; // 44px width + 2px gap
+
+      container.addEventListener('touchstart', (e) => {
+        isDragging = true;
+        startX = e.touches[0].pageX - container.offsetLeft;
+        touchScrollPos = Math.abs(parseInt(paginationContainer.style.transform?.match(/-?\d+/)?.[0] || 0));
+      });
+
+      container.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        const x = e.touches[0].pageX - container.offsetLeft;
+        const walk = (startX - x) * 1.5;
+        const maxScroll = Math.max(0, (totalPages * buttonWidth) - container.offsetWidth + (buttonWidth * 2));
+        const newScroll = Math.max(0, Math.min(touchScrollPos + walk, maxScroll));
+        paginationContainer.style.transform = `translateX(-${newScroll}px)`;
+      });
+
+      container.addEventListener('touchend', () => {
+        isDragging = false;
+      });
+
       container.addEventListener('wheel', (e) => {
         e.preventDefault();
-        const buttonWidth = 46; // 44px width + 2px gap
-        const scrollSpeed = 3; // Increased scroll speed for better navigation
+        const scrollSpeed = 3;
         const scrollAmount = (e.deltaY > 0 ? 1 : -1) * scrollSpeed * buttonWidth;
         const maxScroll = Math.max(0, (totalPages * buttonWidth) - container.offsetWidth + (buttonWidth * 2));
         const currentScroll = Math.abs(parseInt(paginationContainer.style.transform?.match(/-?\d+/)?.[0] || 0));
         const newScroll = Math.max(0, Math.min(currentScroll + scrollAmount, maxScroll));
-        
-        // Only update the visual scroll position
         paginationContainer.style.transform = `translateX(-${newScroll}px)`;
       }, { passive: false });
 
       // Initial scroll position to center current page
-      const buttonWidth = 46; // 44px width + 2px gap
       const containerWidth = container.offsetWidth;
       const maxScroll = Math.max(0, (totalPages * buttonWidth) - containerWidth + (buttonWidth * 2));
-      let scrollLeft = (currentPage - 1) * buttonWidth - (containerWidth / 2) + (buttonWidth / 2);
-      scrollLeft = Math.max(0, Math.min(scrollLeft, maxScroll));
-      paginationContainer.style.transform = `translateX(-${scrollLeft}px)`;
+      const initialScrollPos = (currentPage - 1) * buttonWidth - (containerWidth / 2) + (buttonWidth / 2);
+      const centeredScrollPos = Math.max(0, Math.min(initialScrollPos, maxScroll));
+      paginationContainer.style.transform = `translateX(-${centeredScrollPos}px)`;
     }
 
     // Calculate and render the current page of items.
