@@ -53,11 +53,21 @@
   <div id="itemsContainer" class="grid grid-cols-6 md:grid-cols-12 lg:grid-cols-18 gap-2"></div>
 
   <!-- Pagination container -->
-  <ul id="paginationContainer" class="flex justify-center gap-2 mt-6"></ul>
+  <div class="flex justify-center mt-6">
+    <div class="flex items-center gap-2">
+      <button id="prevButton" class="px-4 py-2 rounded-lg bg-melvor-surface text-gray-400 hover:bg-melvor-hover hover:text-white transition-all duration-200">Prev</button>
+      <div class="relative w-[400px] overflow-hidden">
+        <div class="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-melvor-bg to-transparent z-10 pointer-events-none"></div>
+        <div class="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-melvor-bg to-transparent z-10 pointer-events-none"></div>
+        <ul id="paginationContainer" class="flex gap-1.5 transition-transform duration-300 ease-in-out px-4"></ul>
+      </div>
+      <button id="nextButton" class="px-4 py-2 rounded-lg bg-melvor-surface text-gray-400 hover:bg-melvor-hover hover:text-white transition-all duration-200">Next</button>
+    </div>
+  </div>
 
   <!-- Modal for item details -->
   <div id="itemDetails" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
-    <div class="bg-melvor-surface rounded-xl p-6 max-w-2xl w-11/12 mx-4 relative transform transition-all duration-300 scale-95 opacity-0">
+    <div class="bg-melvor-surface rounded-xl p-4 sm:p-6 max-w-2xl w-[95%] sm:w-11/12 mx-auto relative transform transition-all duration-300 scale-95 opacity-0">
       <button id="closeDetails" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors duration-200">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -243,51 +253,81 @@
 
     // Render pagination controls based on filteredItems length.
     function renderPagination() {
-      paginationContainer.innerHTML = '';
+      const paginationContainer = document.getElementById('paginationContainer');
+      const prevButton = document.getElementById('prevButton');
+      const nextButton = document.getElementById('nextButton');
       const totalPages = Math.ceil(filteredItems.length / pageSize);
-      if (totalPages <= 1) return;
+      
+      if (totalPages <= 1) {
+        paginationContainer.parentElement.parentElement.classList.add('hidden');
+        return;
+      } else {
+        paginationContainer.parentElement.parentElement.classList.remove('hidden');
+      }
 
-      const createPaginationButton = (text, isActive = false, onClick) => {
+      // Update prev/next buttons
+      prevButton.disabled = currentPage === 1;
+      prevButton.classList.toggle('opacity-50', currentPage === 1);
+      prevButton.onclick = () => {
+        if (currentPage > 1) {
+          currentPage--;
+          renderCurrentPage();
+        }
+      };
+
+      nextButton.disabled = currentPage === totalPages;
+      nextButton.classList.toggle('opacity-50', currentPage === totalPages);
+      nextButton.onclick = () => {
+        if (currentPage < totalPages) {
+          currentPage++;
+          renderCurrentPage();
+        }
+      };
+
+      // Create page buttons
+      paginationContainer.innerHTML = '';
+      const createPageButton = (pageNum) => {
         const button = document.createElement('button');
-        button.className = `px-4 py-2 rounded-lg transition-all duration-200 ${
-          isActive 
-            ? 'bg-melvor-accent text-white' 
-            : 'bg-melvor-surface text-gray-400 hover:bg-melvor-hover hover:text-white'
+        button.className = `min-w-[44px] h-10 flex items-center justify-center rounded-lg transition-all duration-200 px-2 ${
+          pageNum === currentPage 
+            ? 'bg-melvor-accent text-white scale-110' 
+            : 'bg-melvor-surface text-gray-400 hover:bg-melvor-hover hover:text-white hover:scale-105'
         }`;
-        button.textContent = text;
-        button.addEventListener('click', onClick);
+        button.textContent = pageNum;
+        button.onclick = () => {
+          currentPage = pageNum;
+          renderCurrentPage();
+        };
         return button;
       };
 
-      // Previous button
-      paginationContainer.appendChild(
-        createPaginationButton('Prev', false, () => {
-          if (currentPage > 1) {
-            currentPage--;
-            renderCurrentPage();
-          }
-        })
-      );
-
-      // Page numbers
+      // Create all page buttons
       for (let i = 1; i <= totalPages; i++) {
-        paginationContainer.appendChild(
-          createPaginationButton(i.toString(), i === currentPage, () => {
-            currentPage = i;
-            renderCurrentPage();
-          })
-        );
+        paginationContainer.appendChild(createPageButton(i));
       }
 
-      // Next button
-      paginationContainer.appendChild(
-        createPaginationButton('Next', false, () => {
-          if (currentPage < totalPages) {
-            currentPage++;
-            renderCurrentPage();
-          }
-        })
-      );
+      // Add wheel event listener for smooth scrolling
+      const container = paginationContainer.parentElement;
+      container.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const buttonWidth = 46; // 44px width + 2px gap
+        const scrollSpeed = 3; // Increased scroll speed for better navigation
+        const scrollAmount = (e.deltaY > 0 ? 1 : -1) * scrollSpeed * buttonWidth;
+        const maxScroll = Math.max(0, (totalPages * buttonWidth) - container.offsetWidth + (buttonWidth * 2));
+        const currentScroll = Math.abs(parseInt(paginationContainer.style.transform?.match(/-?\d+/)?.[0] || 0));
+        const newScroll = Math.max(0, Math.min(currentScroll + scrollAmount, maxScroll));
+        
+        // Only update the visual scroll position
+        paginationContainer.style.transform = `translateX(-${newScroll}px)`;
+      }, { passive: false });
+
+      // Initial scroll position to center current page
+      const buttonWidth = 46; // 44px width + 2px gap
+      const containerWidth = container.offsetWidth;
+      const maxScroll = Math.max(0, (totalPages * buttonWidth) - containerWidth + (buttonWidth * 2));
+      let scrollLeft = (currentPage - 1) * buttonWidth - (containerWidth / 2) + (buttonWidth / 2);
+      scrollLeft = Math.max(0, Math.min(scrollLeft, maxScroll));
+      paginationContainer.style.transform = `translateX(-${scrollLeft}px)`;
     }
 
     // Calculate and render the current page of items.
@@ -302,14 +342,14 @@
     // Show detailed information about an item in a modal.
     function showItemDetails(item) {
       let html = `
-        <div class="flex flex-col md:flex-row gap-6">
+        <div class="flex flex-col sm:flex-row gap-4 sm:gap-6">
           ${item.image ? `
-            <div class="flex-shrink-0">
-              <img src="${item.image}" alt="${item.name}" class="w-24 h-24 object-contain bg-melvor-bg rounded-lg p-2">
+            <div class="flex-shrink-0 mx-auto sm:mx-0">
+              <img src="${item.image}" alt="${item.name}" class="w-20 h-20 sm:w-24 sm:h-24 object-contain bg-melvor-bg rounded-lg p-2">
             </div>
           ` : ''}
-          <div class="flex-grow">
-            <h2 class="text-2xl font-bold mb-4">${item.name}</h2>
+          <div class="flex-grow text-center sm:text-left">
+            <h2 class="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">${item.name}</h2>
             <div class="space-y-3">
               <p><span class="text-gray-400">Category:</span> ${item.category || 'N/A'}</p>
               <p><span class="text-gray-400">Type:</span> ${item.type || 'N/A'}</p>
@@ -324,9 +364,9 @@
               ` : ''}
             </div>
             ${item.equipmentStats ? `
-              <div class="mt-6">
-                <h3 class="text-xl font-semibold mb-3">Equipment Stats</h3>
-                <div class="grid grid-cols-2 gap-2">
+              <div class="mt-4 sm:mt-6">
+                <h3 class="text-lg sm:text-xl font-semibold mb-2 sm:mb-3">Equipment Stats</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   ${Object.entries(item.equipmentStats).map(([stat, value]) => `
                     <div class="bg-melvor-bg rounded-lg p-3">
                       <span class="text-gray-400">${stat}:</span> ${value}
