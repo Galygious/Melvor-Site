@@ -67,13 +67,13 @@
 
   <!-- Modal for item details -->
   <div id="itemDetails" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
-    <div class="bg-melvor-surface sm:rounded-xl w-full h-full sm:w-auto sm:h-auto sm:max-w-2xl sm:m-4 relative transform transition-all duration-300 scale-95 opacity-0 overflow-y-auto">
-      <button id="closeDetails" class="absolute top-4 right-4 p-2 text-gray-400 hover:text-white transition-colors duration-200 hover:bg-melvor-hover rounded-lg">
+    <div class="bg-melvor-surface sm:rounded-xl w-full h-full sm:w-auto sm:h-auto sm:max-w-2xl sm:m-4 relative transform transition-all duration-300 scale-95 opacity-0 max-h-[85vh]">
+      <button id="closeDetails" class="absolute top-4 right-4 p-2 text-gray-400 hover:text-white transition-colors duration-200 hover:bg-melvor-hover rounded-lg z-10">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
-      <div id="detailsContent" class="mt-14 p-4 sm:mt-6 sm:p-6"></div>
+      <div id="detailsContent" class="mt-14 p-4 sm:mt-12 sm:p-6 overflow-y-auto max-h-[calc(85vh-4rem)]"></div>
     </div>
   </div>
 
@@ -317,7 +317,38 @@
         const scrollPos = (currentPage - 1) * buttonWidth - (container.offsetWidth / 2) + (buttonWidth / 2);
         container.scrollLeft = Math.max(0, scrollPos);
       } else {
-        // Handle wheel scrolling on desktop
+        // Handle desktop scrolling
+        let isDragging = false;
+        let startX = 0;
+        let scrollLeft = 0;
+
+        container.addEventListener('mousedown', (e) => {
+          isDragging = true;
+          startX = e.pageX - container.offsetLeft;
+          scrollLeft = Math.abs(parseInt(paginationContainer.style.transform?.match(/-?\d+/)?.[0] || 0));
+          container.style.cursor = 'grabbing';
+        });
+
+        container.addEventListener('mousemove', (e) => {
+          if (!isDragging) return;
+          e.preventDefault();
+          const x = e.pageX - container.offsetLeft;
+          const walk = (startX - x) * 2;
+          const maxScroll = Math.max(0, (totalPages * buttonWidth) - container.offsetWidth + (buttonWidth * 2));
+          const newScroll = Math.max(0, Math.min(scrollLeft + walk, maxScroll));
+          paginationContainer.style.transform = `translateX(-${newScroll}px)`;
+        });
+
+        container.addEventListener('mouseup', () => {
+          isDragging = false;
+          container.style.cursor = '';
+        });
+
+        container.addEventListener('mouseleave', () => {
+          isDragging = false;
+          container.style.cursor = '';
+        });
+
         container.addEventListener('wheel', (e) => {
           e.preventDefault();
           const scrollSpeed = 3;
@@ -333,6 +364,9 @@
         const initialScrollPos = (currentPage - 1) * buttonWidth - (container.offsetWidth / 2) + (buttonWidth / 2);
         const centeredScrollPos = Math.max(0, Math.min(initialScrollPos, maxScroll));
         paginationContainer.style.transform = `translateX(-${centeredScrollPos}px)`;
+
+        // Add grab cursor
+        container.style.cursor = 'grab';
       }
     }
 
@@ -348,7 +382,7 @@
     // Show detailed information about an item in a modal.
     function showItemDetails(item) {
       let html = `
-        <div class="flex flex-col sm:flex-row gap-4 sm:gap-6">
+        <div class="flex flex-col sm:flex-row gap-4 sm:gap-6 overflow-hidden">
           ${item.image ? `
             <div class="flex-shrink-0 mx-auto sm:mx-0">
               <img src="${item.image}" alt="${item.name}" class="w-20 h-20 sm:w-24 sm:h-24 object-contain bg-melvor-bg rounded-lg p-2">
@@ -356,26 +390,68 @@
           ` : ''}
           <div class="flex-grow text-center sm:text-left">
             <h2 class="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">${item.name}</h2>
+            
+            <!-- Basic Info -->
             <div class="space-y-3">
-              <p><span class="text-gray-400">Category:</span> ${item.category || 'N/A'}</p>
-              <p><span class="text-gray-400">Type:</span> ${item.type || 'N/A'}</p>
+              ${item.className ? `<p><span class="text-gray-400">Class:</span> ${item.className}</p>` : ''}
+              ${item.category ? `<p><span class="text-gray-400">Category:</span> ${item.category}</p>` : ''}
+              ${item.type ? `<p><span class="text-gray-400">Type:</span> ${item.type}</p>` : ''}
+              ${item.tier ? `<p><span class="text-gray-400">Tier:</span> ${item.tier}</p>` : ''}
               ${item.equipmentSlot ? `
                 <p><span class="text-gray-400">Equipment Slots:</span> ${item.equipmentSlot.map(slot => 
                   slot.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
                 ).join(', ')}</p>
               ` : ''}
-              <p><span class="text-gray-400">Description:</span> ${item.description || 'No description available.'}</p>
+              ${item.description ? `<p><span class="text-gray-400">Description:</span> ${item.description}</p>` : ''}
               ${item.sellPrice ? `
                 <p><span class="text-gray-400">Sell Price:</span> ${item.sellPrice} ${item.sellCurrency || ''}</p>
               ` : ''}
+              ${item.soulPoints ? `<p><span class="text-gray-400">Soul Points:</span> ${item.soulPoints}</p>` : ''}
             </div>
+
+            <!-- Equipment Stats -->
             ${item.equipmentStats ? `
               <div class="mt-4 sm:mt-6">
                 <h3 class="text-lg sm:text-xl font-semibold mb-2 sm:mb-3">Equipment Stats</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   ${Object.entries(item.equipmentStats).map(([stat, value]) => `
                     <div class="bg-melvor-bg rounded-lg p-3">
-                      <span class="text-gray-400">${stat}:</span> ${value}
+                      <span class="text-gray-400">${stat.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span> ${value}
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Equipment Requirements -->
+            ${item.equipRequirements ? `
+              <div class="mt-4 sm:mt-6">
+                <h3 class="text-lg sm:text-xl font-semibold mb-2 sm:mb-3">Requirements</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  ${Object.entries(item.equipRequirements).map(([skill, level]) => `
+                    <div class="bg-melvor-bg rounded-lg p-3">
+                      <span class="text-gray-400">${skill.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span> Level ${level}
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Special Attacks -->
+            ${item.specialAttacks ? `
+              <div class="mt-4 sm:mt-6">
+                <h3 class="text-lg sm:text-xl font-semibold mb-2 sm:mb-3">Special Attacks</h3>
+                <div class="space-y-3">
+                  ${Object.entries(item.specialAttacks).map(([name, attack]) => `
+                    <div class="bg-melvor-bg rounded-lg p-3">
+                      <h4 class="font-semibold text-white mb-2">${name}</h4>
+                      <div class="space-y-2 text-sm">
+                        ${attack.description ? `<p><span class="text-gray-400">Effect:</span> ${attack.description}</p>` : ''}
+                        ${attack.chance ? `<p><span class="text-gray-400">Chance:</span> ${attack.chance * 100}%</p>` : ''}
+                        ${attack.attackCount ? `<p><span class="text-gray-400">Attack Count:</span> ${attack.attackCount}</p>` : ''}
+                        ${attack.attackInterval ? `<p><span class="text-gray-400">Attack Interval:</span> ${attack.attackInterval}ms</p>` : ''}
+                        ${attack.lifesteal ? `<p><span class="text-gray-400">Lifesteal:</span> ${attack.lifesteal * 100}%</p>` : ''}
+                      </div>
                     </div>
                   `).join('')}
                 </div>
