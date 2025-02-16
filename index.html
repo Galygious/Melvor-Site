@@ -80,39 +80,122 @@
   <script>
     // Create loading overlay
     document.addEventListener('DOMContentLoaded', async () => {
-      // Create and add loading element
+      // Create loading overlay with progress
       const loadingEl = document.createElement('div');
       loadingEl.id = 'loading';
       loadingEl.className = 'fixed inset-0 bg-melvor-bg bg-opacity-90 flex items-center justify-center z-50';
       loadingEl.innerHTML = `
         <div class="text-center">
           <div class="w-16 h-16 border-4 border-melvor-accent border-t-transparent rounded-full animate-spin mb-4"></div>
-          <div class="text-lg text-white">Loading items...</div>
+          <div class="text-lg text-white mb-2">Loading items...</div>
+          <div class="text-sm text-gray-400" id="loadingProgress">Initializing...</div>
         </div>
       `;
       document.body.appendChild(loadingEl);
       
       // Prevent interactions while loading
       document.body.style.pointerEvents = 'none';
+
+      // Background loading indicator
+      const bgLoadingEl = document.createElement('div');
+      bgLoadingEl.id = 'bgLoading';
+      bgLoadingEl.className = 'fixed bottom-4 right-4 bg-melvor-surface rounded-lg p-3 shadow-lg hidden';
+      bgLoadingEl.innerHTML = `
+        <div class="flex items-center gap-2">
+          <div class="w-4 h-4 border-2 border-melvor-accent border-t-transparent rounded-full animate-spin"></div>
+          <span class="text-sm text-white">Loading additional images...</span>
+        </div>
+      `;
+      document.body.appendChild(bgLoadingEl);
       
       // Initialize page
       try {
         // Fetch the JSON data
         const response = await fetch('items.json');
         const gameData = await response.json();
-        console.log('Fetched data:', gameData);
 
-        // Combine items from all namespaces into a single array, filtering out invalid items
+        // Define constants
+        const pageSize = 180;
+        const imageCache = new Map();
+
+        // Function to preload a single image
+        function preloadImage(url) {
+          if (imageCache.has(url)) {
+            return imageCache.get(url);
+          }
+
+          const promise = new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => resolve(url);
+            img.onerror = () => resolve(url); // Still resolve on error
+            img.src = url;
+          });
+
+          imageCache.set(url, promise);
+          return promise;
+        }
+
+        // Function to preload images for specific pages
+        async function preloadImagesForPages(items, updateProgress) {
+          const imageUrls = items.filter(item => item.image).map(item => item.image);
+          const total = imageUrls.length;
+          let loaded = 0;
+
+          const promises = imageUrls.map(async url => {
+            await preloadImage(url);
+            loaded++;
+            if (updateProgress) {
+              updateProgress(loaded, total);
+            }
+          });
+
+          await Promise.all(promises);
+        }
+
+        // Function to preload images for surrounding pages
+        async function preloadSurroundingPages() {
+          const totalPages = Math.ceil(filteredItems.length / pageSize);
+          const pagesToPreload = [currentPage - 1, currentPage + 1]; // Previous and next pages
+          
+          for (const pageNum of pagesToPreload) {
+            if (pageNum > 0 && pageNum <= totalPages) {
+              const start = (pageNum - 1) * pageSize;
+              const end = start + pageSize;
+              const pageItems = filteredItems.slice(start, end);
+              
+              // Only preload if any images aren't cached
+              if (pageItems.some(item => item.image && !imageCache.has(item.image))) {
+                // Preload in background without showing loading indicator
+                await preloadImagesForPages(pageItems);
+              }
+            }
+          }
+        }
+
+        // Function to check if all images for items are cached
+        function areImagesCached(items) {
+          return items.every(item => !item.image || imageCache.has(item.image));
+        }
+
+        // Combine items from all namespaces into a single array
         const allItems = [];
         for (const ns in gameData) {
           for (const itemKey in gameData[ns]) {
             const item = gameData[ns][itemKey];
             if (item && typeof item === 'object' && item.name) {
-              item._namespace = ns; // Store the namespace info
+              item._namespace = ns;
               allItems.push(item);
             }
           }
         }
+
+        // Preload first two pages of images
+        const initialItems = allItems.slice(0, pageSize * 2);
+        const progressEl = document.getElementById('loadingProgress');
+        await preloadImagesForPages(initialItems, (loaded, total) => {
+          const percentage = Math.round((loaded / total) * 100);
+          progressEl.textContent = `Loading initial images... ${percentage}%`;
+        });
 
         // Remove loading indicator and enable page interactions
         loadingEl.remove();
@@ -126,7 +209,6 @@
         const closeDetails = document.getElementById('closeDetails');
 
         let currentPage = 1;
-        const pageSize = 180; //
         let filteredItems = allItems.slice(); // Starts as a copy of allItems
         
         // Populate category filter
@@ -226,9 +308,20 @@
           renderCurrentPage();
         }
 
-    // Render a subset of items on the current page.
-    function renderItems(items) {
+    // Render a subset of items on the current page
+    async function renderItems(items) {
       itemsContainer.innerHTML = '';
+      
+      // Only show loading indicator and preload if images aren't cached
+      if (!areImagesCached(items)) {
+        bgLoadingEl.classList.remove('hidden');
+        await preloadImagesForPages(items);
+        bgLoadingEl.classList.add('hidden');
+      }
+
+      // Start preloading surrounding pages in the background
+      preloadSurroundingPages();
+
       items.forEach(item => {
         const itemDiv = document.createElement('div');
         itemDiv.className = 'bg-melvor-surface border border-gray-700 rounded-lg p-1.5 cursor-pointer transform transition-all duration-200 hover:bg-melvor-hover hover:scale-[1.02] hover:border-melvor-accent flex flex-col items-center text-center group';
@@ -495,8 +588,10 @@
     slotFilter.addEventListener('change', filterItems);
     document.getElementById('sortSelect').addEventListener('change', filterItems);
 
-        // Initial render of the first page
+        // Initial render and preload
         renderCurrentPage();
+        // Preload second page in background
+        preloadSurroundingPages();
       } catch (error) {
         console.error('Error loading the JSON file:', error);
         loadingEl.textContent = 'Error loading items. Please refresh.';
