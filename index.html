@@ -306,33 +306,42 @@
         paginationContainer.appendChild(createPageButton(i));
       }
 
-      // Add touch and wheel event listeners for smooth scrolling
+      // Add scroll event listeners
       const container = paginationContainer.parentElement;
-      let isDragging = false;
-      let startX = 0;
-      let touchScrollPos = 0;
-      const buttonWidth = 46; // 44px width + 2px gap
+      let startX, startScrollLeft;
+      const buttonWidth = 46;
 
-      container.addEventListener('touchstart', (e) => {
-        isDragging = true;
-        startX = e.touches[0].pageX - container.offsetLeft;
-        touchScrollPos = Math.abs(parseInt(paginationContainer.style.transform?.match(/-?\d+/)?.[0] || 0));
-      });
+      function onDragStart(e) {
+        startX = e.type === 'mousedown' ? e.pageX : e.touches[0].pageX;
+        startScrollLeft = Math.abs(parseInt(paginationContainer.style.transform?.match(/-?\d+/)?.[0] || 0));
+        
+        if (e.type === 'touchstart') {
+          container.addEventListener('touchmove', onDragMove);
+          container.addEventListener('touchend', onDragEnd);
+        } else {
+          container.addEventListener('mousemove', onDragMove);
+          container.addEventListener('mouseup', onDragEnd);
+        }
+      }
 
-      container.addEventListener('touchmove', (e) => {
-        if (!isDragging) return;
+      function onDragMove(e) {
         e.preventDefault();
-        const x = e.touches[0].pageX - container.offsetLeft;
-        const walk = (startX - x) * 1.5;
+        const x = e.type === 'mousemove' ? e.pageX : e.touches[0].pageX;
+        const walk = (startX - x) * 2;
         const maxScroll = Math.max(0, (totalPages * buttonWidth) - container.offsetWidth + (buttonWidth * 2));
-        const newScroll = Math.max(0, Math.min(touchScrollPos + walk, maxScroll));
+        const newScroll = Math.max(0, Math.min(startScrollLeft + walk, maxScroll));
         paginationContainer.style.transform = `translateX(-${newScroll}px)`;
-      });
+      }
 
-      container.addEventListener('touchend', () => {
-        isDragging = false;
-      });
+      function onDragEnd() {
+        container.removeEventListener('touchmove', onDragMove);
+        container.removeEventListener('touchend', onDragEnd);
+        container.removeEventListener('mousemove', onDragMove);
+        container.removeEventListener('mouseup', onDragEnd);
+      }
 
+      container.addEventListener('touchstart', onDragStart);
+      container.addEventListener('mousedown', onDragStart);
       container.addEventListener('wheel', (e) => {
         e.preventDefault();
         const scrollSpeed = 3;
