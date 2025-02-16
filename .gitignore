@@ -8,8 +8,8 @@ node_modules/
 /build
 /.vite
 
-# Environment files
-.env
+# Environment files/sig
+
 .env.local
 .env.development.local
 .env.test.local
