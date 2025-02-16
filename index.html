@@ -470,13 +470,23 @@
       }, 10);
     }
 
-    // Close the modal when the close button is clicked.
-    closeDetails.addEventListener('click', () => {
+    // Function to close the modal with animation
+    function closeModal() {
       const modal = itemDetails.querySelector('.bg-melvor-surface');
       modal.classList.add('scale-95', 'opacity-0');
       setTimeout(() => {
         itemDetails.classList.add('hidden');
       }, 300);
+    }
+
+    // Close the modal when the close button is clicked
+    closeDetails.addEventListener('click', closeModal);
+
+    // Close the modal when Escape key is pressed
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !itemDetails.classList.contains('hidden')) {
+        closeModal();
+      }
     });
 
     // Event listeners for filters and sorting
