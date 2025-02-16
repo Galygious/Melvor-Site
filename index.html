@@ -137,7 +137,7 @@
 
         // Function to preload images for specific pages
         async function preloadImagesForPages(items, updateProgress) {
-          const imageUrls = items.filter(item => item.image).map(item => item.image);
+          const imageUrls = items.filter(item => item.image).map(item => item.image.replace('assets/', 'assets_web/').replace('.png', '.webp'));
           const total = imageUrls.length;
           let loaded = 0;
 
@@ -164,7 +164,7 @@
               const pageItems = filteredItems.slice(start, end);
               
               // Only preload if any images aren't cached
-              if (pageItems.some(item => item.image && !imageCache.has(item.image))) {
+              if (pageItems.some(item => item.image && !imageCache.has(item.image.replace('assets/', 'assets_web/').replace('.png', '.webp')))) {
                 // Preload in background without showing loading indicator
                 await preloadImagesForPages(pageItems);
               }
@@ -174,7 +174,7 @@
 
         // Function to check if all images for items are cached
         function areImagesCached(items) {
-          return items.every(item => !item.image || imageCache.has(item.image));
+          return items.every(item => !item.image || imageCache.has(item.image.replace('assets/', 'assets_web/').replace('.png', '.webp')));
         }
 
         // Combine items from all namespaces into a single array
@@ -330,7 +330,7 @@
           <h3 class="font-semibold text-xs mb-1 line-clamp-2 h-8 px-0.5 group-hover:text-white transition-colors duration-200">${item.name}</h3>
           ${item.image ? 
             `<div class="w-15 h-15 flex items-center justify-center mb-1 bg-melvor-bg rounded p-0.5">
-              <img src="${item.image}" alt="${item.name}" class="max-w-full max-h-full object-contain">
+              <img src="${item.image.replace('assets/', 'assets_web/').replace('.png', '.webp')}" alt="${item.name}" class="max-w-full max-h-full object-contain">
              </div>` 
             : '<div class="w-10 h-10 bg-melvor-bg rounded mb-1 flex items-center justify-center"><svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg></div>'}
           ${item.category ? 
@@ -478,7 +478,7 @@
         <div class="flex flex-col sm:flex-row gap-4 sm:gap-6 overflow-hidden">
           ${item.image ? `
             <div class="flex-shrink-0 mx-auto sm:mx-0">
-              <img src="${item.image}" alt="${item.name}" class="w-20 h-20 sm:w-24 sm:h-24 object-contain bg-melvor-bg rounded-lg p-2">
+              <img src="${item.image.replace('assets/', 'assets_web/').replace('.png', '.webp')}" alt="${item.name}" class="w-20 h-20 sm:w-24 sm:h-24 object-contain bg-melvor-bg rounded-lg p-2">
             </div>
           ` : ''}
           <div class="flex-grow text-center sm:text-left">
