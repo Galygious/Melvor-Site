@@ -2,132 +2,374 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Game Items Database</title>
-  <!-- Bootstrap CSS for styling -->
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-    rel="stylesheet"
-  />
-  <style>
-    /* Thumbnail image styling within the name column */
-    .thumb-img {
-      width: 40px;
-      height: auto;
-      margin-right: 10px;
-      vertical-align: middle;
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Melvor Items Viewer with Pagination</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'melvor-bg': '#1a1f2e',
+            'melvor-surface': '#2a2f3e',
+            'melvor-accent': '#4a7dff',
+            'melvor-hover': '#3a3f4e'
+          }
+        }
+      }
     }
-  </style>
+  </script>
 </head>
-<body>
-  <div class="container py-4">
-    <h1 class="mb-4">Game Items Database</h1>
-    
-    <!-- Search input -->
-    <div class="mb-3">
-      <input
-        type="text"
-        id="searchInput"
-        class="form-control"
-        placeholder="Search items by name..."
-      />
+<body class="bg-melvor-bg text-white min-h-screen p-6">
+  <h1 class="text-3xl font-bold mb-8 text-center">Melvor Items Viewer</h1>
+  
+  <!-- Navigation Section -->
+  <div class="flex flex-wrap gap-4 mb-6">
+    <div class="flex-1 min-w-[200px]">
+      <select id="categoryFilter" class="w-full bg-melvor-surface border border-gray-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-melvor-accent focus:border-transparent transition-all duration-200">
+        <option value="">All Categories</option>
+      </select>
     </div>
+    <div class="flex-1 min-w-[200px]">
+      <select id="slotFilter" class="w-full bg-melvor-surface border border-gray-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-melvor-accent focus:border-transparent transition-all duration-200">
+        <option value="">All Equipment Slots</option>
+      </select>
+    </div>
+    <div class="flex-1 min-w-[200px]">
+      <select id="sortSelect" class="w-full bg-melvor-surface border border-gray-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-melvor-accent focus:border-transparent transition-all duration-200">
+        <option value="name-asc">Name (A-Z)</option>
+        <option value="name-desc">Name (Z-A)</option>
+        <option value="category-asc">Category (A-Z)</option>
+        <option value="category-desc">Category (Z-A)</option>
+        <option value="price-asc">Price (Low to High)</option>
+        <option value="price-desc">Price (High to Low)</option>
+      </select>
+    </div>
+  </div>
+  
+  <input type="text" id="searchInput" placeholder="Search items..." class="w-full bg-melvor-surface border border-gray-700 rounded-lg p-3 mb-6 text-white placeholder-gray-400 focus:ring-2 focus:ring-melvor-accent focus:border-transparent transition-all duration-200" />
 
-    <!-- Table for displaying items -->
-    <div class="table-responsive">
-      <table class="table table-striped table-bordered" id="itemsTable">
-        <thead class="table-dark">
-          <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Sell Price</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody">
-          <!-- Rows will be added here dynamically -->
-        </tbody>
-      </table>
+  <!-- Container for items list -->
+  <div id="itemsContainer" class="grid grid-cols-6 md:grid-cols-12 lg:grid-cols-18 gap-2"></div>
+
+  <!-- Pagination container -->
+  <ul id="paginationContainer" class="flex justify-center gap-2 mt-6"></ul>
+
+  <!-- Modal for item details -->
+  <div id="itemDetails" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+    <div class="bg-melvor-surface rounded-xl p-6 max-w-2xl w-11/12 mx-4 relative transform transition-all duration-300 scale-95 opacity-0">
+      <button id="closeDetails" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors duration-200">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+      <div id="detailsContent" class="mt-2"></div>
     </div>
   </div>
 
   <script>
-    // Helper function to create a table row for an item
-    function createTableRow(item) {
-      const tr = document.createElement('tr');
+    // Create loading overlay
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Create and add loading element
+      const loadingEl = document.createElement('div');
+      loadingEl.id = 'loading';
+      loadingEl.className = 'fixed inset-0 bg-melvor-bg bg-opacity-90 flex items-center justify-center z-50';
+      loadingEl.innerHTML = `
+        <div class="text-center">
+          <div class="w-16 h-16 border-4 border-melvor-accent border-t-transparent rounded-full animate-spin mb-4"></div>
+          <div class="text-lg text-white">Loading items...</div>
+        </div>
+      `;
+      document.body.appendChild(loadingEl);
+      
+      // Prevent interactions while loading
+      document.body.style.pointerEvents = 'none';
+      
+      // Initialize page
+      try {
+        // Fetch the JSON data
+        const response = await fetch('items.json');
+        const gameData = await response.json();
+        console.log('Fetched data:', gameData);
 
-      // Name column: image and name text combined
-      const tdName = document.createElement('td');
-      if (item.image) {
-        const img = document.createElement('img');
-        img.src = item.image;
-        img.alt = item.name;
-        img.className = 'thumb-img';
-        tdName.appendChild(img);
-      }
-      const nameText = document.createTextNode(item.name || 'N/A');
-      tdName.appendChild(nameText);
-      tr.appendChild(tdName);
-
-      // Type column
-      const tdType = document.createElement('td');
-      tdType.textContent = item.type || 'N/A';
-      tr.appendChild(tdType);
-
-      // Sell Price column (combining price and currency if available)
-      const tdSellPrice = document.createElement('td');
-      let priceText = item.sellPrice ? item.sellPrice : 'N/A';
-      if (item.sellCurrency) {
-        priceText += " " + item.sellCurrency;
-      }
-      tdSellPrice.textContent = priceText;
-      tr.appendChild(tdSellPrice);
-
-      return tr;
-    }
-
-    // Load JSON data, deduplicate items, and build the table
-    fetch('items.json')
-      .then(response => response.json())
-      .then(data => {
-        const itemsMap = {};
-
-        // Iterate over each namespace and its items
-        for (const namespace in data) {
-          const items = data[namespace];
-          for (const itemId in items) {
-            const item = items[itemId];
-            // Deduplicate by item name (if name exists)
-            if (item.name && !itemsMap[item.name]) {
-              itemsMap[item.name] = item;
+        // Combine items from all namespaces into a single array, filtering out invalid items
+        const allItems = [];
+        for (const ns in gameData) {
+          for (const itemKey in gameData[ns]) {
+            const item = gameData[ns][itemKey];
+            if (item && typeof item === 'object' && item.name) {
+              item._namespace = ns; // Store the namespace info
+              allItems.push(item);
             }
           }
         }
 
-        const tableBody = document.getElementById('tableBody');
-        const allRows = [];
+        // Remove loading indicator and enable page interactions
+        loadingEl.remove();
+        document.body.style.pointerEvents = 'auto';
 
-        // Create table rows for each deduplicated item
-        Object.values(itemsMap).forEach(item => {
-          const row = createTableRow(item);
-          tableBody.appendChild(row);
-          allRows.push(row);
-        });
-
-        // Search functionality to filter rows by name
+        const itemsContainer = document.getElementById('itemsContainer');
         const searchInput = document.getElementById('searchInput');
-        searchInput.addEventListener('input', function() {
-          const query = searchInput.value.toLowerCase();
-          allRows.forEach(row => {
-            // The first cell contains the image and name text
-            const nameCell = row.children[0];
-            if (nameCell) {
-              const text = nameCell.textContent.toLowerCase();
-              row.style.display = text.includes(query) ? '' : 'none';
-            }
-          });
+        const paginationContainer = document.getElementById('paginationContainer');
+        const itemDetails = document.getElementById('itemDetails');
+        const detailsContent = document.getElementById('detailsContent');
+        const closeDetails = document.getElementById('closeDetails');
+
+        let currentPage = 1;
+        const pageSize = 180; //
+        let filteredItems = allItems.slice(); // Starts as a copy of allItems
+        
+        // Populate category filter
+        const categories = [...new Set(allItems.map(item => item.category))].filter(Boolean).sort();
+        const categoryFilter = document.getElementById('categoryFilter');
+        categories.forEach(category => {
+          const option = document.createElement('option');
+          option.value = category;
+          option.textContent = category;
+          categoryFilter.appendChild(option);
         });
-      })
-      .catch(error => console.error('Error loading JSON:', error));
+
+        // Populate equipment slot filter
+        const slots = [...new Set(allItems.flatMap(item => item.equipmentSlot || []))].filter(Boolean).sort();
+        const slotFilter = document.getElementById('slotFilter');
+        slots.forEach(slot => {
+          const option = document.createElement('option');
+          option.value = slot;
+          option.textContent = slot.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          slotFilter.appendChild(option);
+        });
+
+        // Sort function
+        function sortItems(items, sortBy) {
+          const [field, direction] = sortBy.split('-');
+          return [...items].sort((a, b) => {
+            let valueA, valueB;
+            
+            switch(field) {
+              case 'name':
+                valueA = a.name || '';
+                valueB = b.name || '';
+                break;
+              case 'category':
+                valueA = a.category || '';
+                valueB = b.category || '';
+                break;
+              case 'price':
+                valueA = a.sellPrice || 0;
+                valueB = b.sellPrice || 0;
+                break;
+              default:
+                valueA = a[field] || '';
+                valueB = b[field] || '';
+            }
+
+            if (typeof valueA === 'number' && typeof valueB === 'number') {
+              return direction === 'asc' ? valueA - valueB : valueB - valueA;
+            }
+            
+            return direction === 'asc' 
+              ? valueA.toString().localeCompare(valueB.toString())
+              : valueB.toString().localeCompare(valueA.toString());
+          });
+        }
+
+        // Filter function
+        function filterItems() {
+          const searchQuery = searchInput.value.toLowerCase();
+          const selectedCategory = categoryFilter.value;
+          const selectedSlot = slotFilter.value;
+          
+          // First filter by search and category
+          let tempFiltered = allItems.filter(item => {
+            if (!item || !item.name) return false;
+            const itemName = item.name.toLowerCase();
+            const itemCategory = item.category || '';
+            const matchesSearch = !searchQuery || itemName.includes(searchQuery);
+            const matchesCategory = !selectedCategory || itemCategory === selectedCategory;
+            return matchesSearch && matchesCategory;
+          });
+
+          // Then filter by slot and ensure uniqueness
+          if (selectedSlot) {
+            const seen = new Set();
+            filteredItems = tempFiltered.filter(item => {
+              const itemSlots = item.equipmentSlot || [];
+              if (!itemSlots.includes(selectedSlot)) return false;
+              if (seen.has(item.name)) return false;
+              seen.add(item.name);
+              return true;
+            });
+          } else {
+            // If no slot filter, just ensure uniqueness by name
+            const seen = new Set();
+            filteredItems = tempFiltered.filter(item => {
+              if (seen.has(item.name)) return false;
+              seen.add(item.name);
+              return true;
+            });
+          }
+
+          const sortBy = document.getElementById('sortSelect').value;
+          filteredItems = sortItems(filteredItems, sortBy);
+          
+          currentPage = 1;
+          renderCurrentPage();
+        }
+
+    // Render a subset of items on the current page.
+    function renderItems(items) {
+      itemsContainer.innerHTML = '';
+      items.forEach(item => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'bg-melvor-surface border border-gray-700 rounded-lg p-1.5 cursor-pointer transform transition-all duration-200 hover:bg-melvor-hover hover:scale-[1.02] hover:border-melvor-accent flex flex-col items-center text-center group';
+        
+        let content = `
+          <h3 class="font-semibold text-xs mb-1 line-clamp-2 h-8 px-0.5 group-hover:text-white transition-colors duration-200">${item.name}</h3>
+          ${item.image ? 
+            `<div class="w-15 h-15 flex items-center justify-center mb-1 bg-melvor-bg rounded p-0.5">
+              <img src="${item.image}" alt="${item.name}" class="max-w-full max-h-full object-contain">
+             </div>` 
+            : '<div class="w-10 h-10 bg-melvor-bg rounded mb-1 flex items-center justify-center"><svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg></div>'}
+          ${item.category ? 
+            `<span class="text-[10px] text-gray-400 line-clamp-1 px-0.5 group-hover:text-gray-300 transition-colors duration-200">${item.category}</span>` 
+            : ''}
+        `;
+        
+        itemDiv.innerHTML = content;
+        itemDiv.addEventListener('click', () => showItemDetails(item));
+        itemsContainer.appendChild(itemDiv);
+      });
+    }
+
+    // Render pagination controls based on filteredItems length.
+    function renderPagination() {
+      paginationContainer.innerHTML = '';
+      const totalPages = Math.ceil(filteredItems.length / pageSize);
+      if (totalPages <= 1) return;
+
+      const createPaginationButton = (text, isActive = false, onClick) => {
+        const button = document.createElement('button');
+        button.className = `px-4 py-2 rounded-lg transition-all duration-200 ${
+          isActive 
+            ? 'bg-melvor-accent text-white' 
+            : 'bg-melvor-surface text-gray-400 hover:bg-melvor-hover hover:text-white'
+        }`;
+        button.textContent = text;
+        button.addEventListener('click', onClick);
+        return button;
+      };
+
+      // Previous button
+      paginationContainer.appendChild(
+        createPaginationButton('Prev', false, () => {
+          if (currentPage > 1) {
+            currentPage--;
+            renderCurrentPage();
+          }
+        })
+      );
+
+      // Page numbers
+      for (let i = 1; i <= totalPages; i++) {
+        paginationContainer.appendChild(
+          createPaginationButton(i.toString(), i === currentPage, () => {
+            currentPage = i;
+            renderCurrentPage();
+          })
+        );
+      }
+
+      // Next button
+      paginationContainer.appendChild(
+        createPaginationButton('Next', false, () => {
+          if (currentPage < totalPages) {
+            currentPage++;
+            renderCurrentPage();
+          }
+        })
+      );
+    }
+
+    // Calculate and render the current page of items.
+    function renderCurrentPage() {
+      const start = (currentPage - 1) * pageSize;
+      const end = currentPage * pageSize;
+      const currentItems = filteredItems.slice(start, end);
+      renderItems(currentItems);
+      renderPagination();
+    }
+
+    // Show detailed information about an item in a modal.
+    function showItemDetails(item) {
+      let html = `
+        <div class="flex flex-col md:flex-row gap-6">
+          ${item.image ? `
+            <div class="flex-shrink-0">
+              <img src="${item.image}" alt="${item.name}" class="w-24 h-24 object-contain bg-melvor-bg rounded-lg p-2">
+            </div>
+          ` : ''}
+          <div class="flex-grow">
+            <h2 class="text-2xl font-bold mb-4">${item.name}</h2>
+            <div class="space-y-3">
+              <p><span class="text-gray-400">Category:</span> ${item.category || 'N/A'}</p>
+              <p><span class="text-gray-400">Type:</span> ${item.type || 'N/A'}</p>
+              ${item.equipmentSlot ? `
+                <p><span class="text-gray-400">Equipment Slots:</span> ${item.equipmentSlot.map(slot => 
+                  slot.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                ).join(', ')}</p>
+              ` : ''}
+              <p><span class="text-gray-400">Description:</span> ${item.description || 'No description available.'}</p>
+              ${item.sellPrice ? `
+                <p><span class="text-gray-400">Sell Price:</span> ${item.sellPrice} ${item.sellCurrency || ''}</p>
+              ` : ''}
+            </div>
+            ${item.equipmentStats ? `
+              <div class="mt-6">
+                <h3 class="text-xl font-semibold mb-3">Equipment Stats</h3>
+                <div class="grid grid-cols-2 gap-2">
+                  ${Object.entries(item.equipmentStats).map(([stat, value]) => `
+                    <div class="bg-melvor-bg rounded-lg p-3">
+                      <span class="text-gray-400">${stat}:</span> ${value}
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+      
+      detailsContent.innerHTML = html;
+      itemDetails.classList.remove('hidden');
+      
+      // Add animation after a small delay
+      setTimeout(() => {
+        itemDetails.querySelector('.bg-melvor-surface').classList.remove('scale-95', 'opacity-0');
+      }, 10);
+    }
+
+    // Close the modal when the close button is clicked.
+    closeDetails.addEventListener('click', () => {
+      const modal = itemDetails.querySelector('.bg-melvor-surface');
+      modal.classList.add('scale-95', 'opacity-0');
+      setTimeout(() => {
+        itemDetails.classList.add('hidden');
+      }, 300);
+    });
+
+    // Event listeners for filters and sorting
+    searchInput.addEventListener('input', filterItems);
+    categoryFilter.addEventListener('change', filterItems);
+    slotFilter.addEventListener('change', filterItems);
+    document.getElementById('sortSelect').addEventListener('change', filterItems);
+
+        // Initial render of the first page
+        renderCurrentPage();
+      } catch (error) {
+        console.error('Error loading the JSON file:', error);
+        loadingEl.textContent = 'Error loading items. Please refresh.';
+      }
+    });
   </script>
 </body>
 </html>
