@@ -55,25 +55,25 @@
   <!-- Pagination container -->
   <div class="flex justify-center mt-6">
     <div class="flex items-center gap-2">
-      <button id="prevButton" class="px-4 py-2 rounded-lg bg-melvor-surface text-gray-400 hover:bg-melvor-hover hover:text-white transition-all duration-200">Prev</button>
-      <div class="relative w-[400px] overflow-hidden">
+      <button id="prevButton" class="px-2 sm:px-4 py-1 sm:py-2 rounded-lg bg-melvor-surface text-gray-400 hover:bg-melvor-hover hover:text-white transition-all duration-200 text-sm sm:text-base">Prev</button>
+      <div class="relative w-[280px] sm:w-[400px] overflow-hidden">
         <div class="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-melvor-bg to-transparent z-10 pointer-events-none"></div>
         <div class="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-melvor-bg to-transparent z-10 pointer-events-none"></div>
-        <ul id="paginationContainer" class="flex gap-1.5 transition-transform duration-300 ease-in-out px-4"></ul>
+        <ul id="paginationContainer" class="flex gap-1 sm:gap-1.5 transition-transform duration-300 ease-in-out px-4"></ul>
       </div>
-      <button id="nextButton" class="px-4 py-2 rounded-lg bg-melvor-surface text-gray-400 hover:bg-melvor-hover hover:text-white transition-all duration-200">Next</button>
+      <button id="nextButton" class="px-2 sm:px-4 py-1 sm:py-2 rounded-lg bg-melvor-surface text-gray-400 hover:bg-melvor-hover hover:text-white transition-all duration-200 text-sm sm:text-base">Next</button>
     </div>
   </div>
 
   <!-- Modal for item details -->
   <div id="itemDetails" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
-    <div class="bg-melvor-surface rounded-xl p-4 sm:p-6 max-w-2xl w-[95%] sm:w-11/12 mx-auto relative transform transition-all duration-300 scale-95 opacity-0">
-      <button id="closeDetails" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors duration-200">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div class="bg-melvor-surface sm:rounded-xl w-full h-full sm:w-auto sm:h-auto sm:max-w-2xl sm:m-4 relative transform transition-all duration-300 scale-95 opacity-0 overflow-y-auto">
+      <button id="closeDetails" class="absolute top-4 right-4 p-2 text-gray-400 hover:text-white transition-colors duration-200 hover:bg-melvor-hover rounded-lg">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
-      <div id="detailsContent" class="mt-2"></div>
+      <div id="detailsContent" class="mt-14 p-4 sm:mt-6 sm:p-6"></div>
     </div>
   </div>
 
@@ -288,7 +288,7 @@
       paginationContainer.innerHTML = '';
       const createPageButton = (pageNum) => {
         const button = document.createElement('button');
-        button.className = `min-w-[44px] h-10 flex items-center justify-center rounded-lg transition-all duration-200 px-2 ${
+        button.className = `min-w-[36px] sm:min-w-[44px] h-8 sm:h-10 flex items-center justify-center rounded-lg transition-all duration-200 px-1 sm:px-2 text-sm sm:text-base ${
           pageNum === currentPage 
             ? 'bg-melvor-accent text-white scale-110' 
             : 'bg-melvor-surface text-gray-400 hover:bg-melvor-hover hover:text-white hover:scale-105'
