@@ -1,0 +1,485 @@
+{
+    "equipment": {
+      "melvorD:Empty_Equipment": {
+        "uid": 9,
+        "className": "EquipmentItem",
+        "image": "assets/media/skills/combat/food_empty.png",
+        "sellPrice": 0,
+        "sellCurrency": "GP",
+        "tier": "emptyItem"
+      },
+      "melvorD:Bronze_Dagger": {
+        "uid": 933,
+        "name": "Bronze Dagger",
+        "className": "WeaponItem",
+        "category": "Combat",
+        "type": "Weapon",
+        "image": "assets/media/bank/weapon_dagger_bronze.png",
+        "sellPrice": 1,
+        "sellCurrency": "GP",
+        "equipmentSlot": [
+          "Weapon"
+        ],
+        "tier": "bronze",
+        "equipmentStats": {
+          "attackSpeed": 2200,
+          "stabAttackBonus": 7,
+          "slashAttackBonus": 2,
+          "blockAttackBonus": 7,
+          "meleeStrengthBonus": 3,
+          "controlledAttackBonus": 5.333333333333333
+        },
+        "equipRequirements": {
+          "Attack": 1
+        }
+      },
+      "melvorD:Bronze_Sword": {
+        "uid": 934,
+        "name": "Bronze Sword",
+        "className": "WeaponItem",
+        "category": "Combat",
+        "type": "Weapon",
+        "image": "assets/media/bank/weapon_sword_bronze.png",
+        "sellPrice": 1,
+        "sellCurrency": "GP",
+        "equipmentSlot": [
+          "Weapon"
+        ],
+        "tier": "bronze",
+        "equipmentStats": {
+          "attackSpeed": 2400,
+          "stabAttackBonus": 9,
+          "slashAttackBonus": 2,
+          "blockAttackBonus": 1,
+          "meleeStrengthBonus": 5,
+          "controlledAttackBonus": 4
+        },
+        "equipRequirements": {
+          "Attack": 1
+        }
+      },
+      "melvorD:Bronze_Battleaxe": {
+        "uid": 935,
+        "name": "Bronze Battleaxe",
+        "className": "WeaponItem",
+        "category": "Combat",
+        "type": "Weapon",
+        "image": "assets/media/bank/weapon_battleaxe_bronze.png",
+        "sellPrice": 2,
+        "sellCurrency": "GP",
+        "equipmentSlot": [
+          "Weapon"
+        ],
+        "tier": "bronze",
+        "equipmentStats": {
+          "attackSpeed": 3100,
+          "stabAttackBonus": -2,
+          "slashAttackBonus": 3,
+          "blockAttackBonus": 3,
+          "meleeStrengthBonus": 16,
+          "controlledAttackBonus": 1.3333333333333333
+        },
+        "equipRequirements": {
+          "Attack": 1
+        }
+      },
+      "melvorD:Bronze_2H_Sword": {
+        "uid": 936,
+        "name": "Bronze 2H Sword",
+        "className": "WeaponItem",
+        "category": "Combat",
+        "type": "Weapon",
+        "image": "assets/media/bank/weapon_2h_bronze.png",
+        "sellPrice": 2,
+        "sellCurrency": "GP",
+        "equipmentSlot": [
+          "Weapon"
+        ],
+        "tier": "bronze",
+        "equipmentStats": {
+          "attackSpeed": 3600,
+          "stabAttackBonus": -4,
+          "slashAttackBonus": 18,
+          "blockAttackBonus": 18,
+          "meleeStrengthBonus": 18,
+          "controlledAttackBonus": 10.666666666666666
+        },
+        "equipRequirements": {
+          "Attack": 1
+        }
+      },
+      "melvorD:Bronze_Helmet": {
+        "uid": 937,
+        "name": "Bronze Helmet",
+        "className": "EquipmentItem",
+        "category": "Combat",
+        "type": "Armour",
+        "image": "assets/media/bank/armour_helmet_bronze.png",
+        "sellPrice": 1,
+        "sellCurrency": "GP",
+        "equipmentSlot": [
+          "Helmet"
+        ],
+        "tier": "bronze",
+        "equipmentStats": {
+          "rangedAttackBonus": -2,
+          "magicAttackBonus": -6,
+          "meleeDefenceBonus": 4,
+          "rangedDefenceBonus": 4,
+          "magicDefenceBonus": -1
+        },
+        "equipRequirements": {
+          "Defence": 1
+        }
+      },
+      "melvorD:Bronze_Boots": {
+        "uid": 938,
+        "name": "Bronze Boots",
+        "className": "EquipmentItem",
+        "category": "Combat",
+        "type": "Armour",
+        "image": "assets/media/bank/armour_boots_bronze.png",
+        "sellPrice": 1,
+        "sellCurrency": "GP",
+        "equipmentSlot": [
+          "Boots"
+        ],
+        "tier": "bronze",
+        "equipmentStats": {
+          "rangedAttackBonus": -1,
+          "magicAttackBonus": -3,
+          "meleeDefenceBonus": 1
+        },
+        "equipRequirements": {
+          "Defence": 1
+        }
+      },
+      "melvorD:Bronze_Platelegs": {
+        "uid": 939,
+        "name": "Bronze Platelegs",
+        "className": "EquipmentItem",
+        "category": "Combat",
+        "type": "Armour",
+        "image": "assets/media/bank/armour_platelegs_bronze.png",
+        "sellPrice": 2,
+        "sellCurrency": "GP",
+        "equipmentSlot": [
+          "Platelegs"
+        ],
+        "tier": "bronze",
+        "equipmentStats": {
+          "rangedAttackBonus": -7,
+          "magicAttackBonus": -21,
+          "meleeDefenceBonus": 8,
+          "rangedDefenceBonus": 7,
+          "magicDefenceBonus": -4
+        },
+        "equipRequirements": {
+          "Defence": 1
+        }
+      },
+      "melvorD:Bronze_Platebody": {
+        "uid": 940,
+        "name": "Bronze Platebody",
+        "className": "EquipmentItem",
+        "category": "Combat",
+        "type": "Armour",
+        "image": "assets/media/bank/armour_platebody_bronze.png",
+        "sellPrice": 3,
+        "sellCurrency": "GP",
+        "equipmentSlot": [
+          "Platebody"
+        ],
+        "tier": "bronze",
+        "equipmentStats": {
+          "rangedAttackBonus": -10,
+          "magicAttackBonus": -30,
+          "meleeDefenceBonus": 15,
+          "rangedDefenceBonus": 14,
+          "magicDefenceBonus": -6
+        },
+        "equipRequirements": {
+          "Defence": 1
+        }
+      },
+      "melvorD:Iron_Dagger": {
+        "uid": 941,
+        "name": "Iron Dagger",
+        "className": "WeaponItem",
+        "category": "Combat",
+        "type": "Weapon",
+        "image": "assets/media/bank/weapon_dagger_iron.png",
+        "sellPrice": 8,
+        "sellCurrency": "GP",
+        "equipmentSlot": [
+          "Weapon"
+        ],
+        "tier": "iron",
+        "equipmentStats": {
+          "attackSpeed": 2200,
+          "stabAttackBonus": 8,
+          "slashAttackBonus": 3,
+          "blockAttackBonus": 8,
+          "meleeStrengthBonus": 4,
+          "controlledAttackBonus": 6.333333333333333
+        },
+        "equipRequirements": {
+          "Attack": 1
+        }
+      },
+      "melvorD:Iron_Sword": {
+        "uid": 942,
+        "name": "Iron Sword",
+        "className": "WeaponItem",
+        "category": "Combat",
+        "type": "Weapon",
+        "image": "assets/media/bank/weapon_sword_iron.png",
+        "sellPrice": 8,
+        "sellCurrency": "GP",
+        "equipmentSlot": [
+          "Weapon"
+        ],
+        "tier": "iron",
+        "equipmentStats": {
+          "attackSpeed": 2400,
+          "stabAttackBonus": 11,
+          "slashAttackBonus": 3,
+          "blockAttackBonus": 2,
+          "meleeStrengthBonus": 7,
+          "controlledAttackBonus": 5.333333333333333
+        },
+        "equipRequirements": {
+          "Attack": 1
+        }
+      },
+      "melvorD:Iron_Battleaxe": {
+        "uid": 943,
+        "name": "Iron Battleaxe",
+        "className": "WeaponItem",
+        "category": "Combat",
+        "type": "Weapon",
+        "image": "assets/media/bank/weapon_battleaxe_iron.png",
+        "sellPrice": 21,
+        "sellCurrency": "GP",
+        "equipmentSlot": [
+          "Weapon"
+        ],
+        "tier": "iron",
+        "equipmentStats": {
+          "attackSpeed": 3100,
+          "stabAttackBonus": -2,
+          "slashAttackBonus": 4,
+          "blockAttackBonus": 4,
+          "meleeStrengthBonus": 23,
+          "controlledAttackBonus": 2
+        },
+        "equipRequirements": {
+          "Attack": 1
+        }
+      },
+      "melvorD:Iron_2H_Sword": {
+        "uid": 944,
+        "name": "Iron 2H Sword",
+        "className": "WeaponItem",
+        "category": "Combat",
+        "type": "Weapon",
+        "image": "assets/media/bank/weapon_2h_iron.png",
+        "sellPrice": 21,
+        "sellCurrency": "GP",
+        "equipmentSlot": [
+          "Weapon"
+        ],
+        "tier": "iron",
+        "equipmentStats": {
+          "attackSpeed": 3600,
+          "stabAttackBonus": -4,
+          "slashAttackBonus": 26,
+          "blockAttackBonus": 26,
+          "meleeStrengthBonus": 25,
+          "controlledAttackBonus": 16
+        },
+        "equipRequirements": {
+          "Attack": 1
+        }
+      },
+      "melvorD:Iron_Helmet": {
+        "uid": 945,
+        "name": "Iron Helmet",
+        "className": "EquipmentItem",
+        "category": "Combat",
+        "type": "Armour",
+        "image": "assets/media/bank/armour_helmet_iron.png",
+        "sellPrice": 13,
+        "sellCurrency": "GP",
+        "equipmentSlot": [
+          "Helmet"
+        ],
+        "tier": "iron",
+        "equipmentStats": {
+          "rangedAttackBonus": -2,
+          "magicAttackBonus": -6,
+          "meleeDefenceBonus": 6,
+          "rangedDefenceBonus": 6,
+          "magicDefenceBonus": -1
+        },
+        "equipRequirements": {
+          "Defence": 1
+        }
+      },
+      "melvorD:Iron_Boots": {
+        "uid": 946,
+        "name": "Iron Boots",
+        "className": "EquipmentItem",
+        "category": "Combat",
+        "type": "Armour",
+        "image": "assets/media/bank/armour_boots_iron.png",
+        "sellPrice": 13,
+        "sellCurrency": "GP",
+        "equipmentSlot": [
+          "Boots"
+        ],
+        "tier": "iron",
+        "equipmentStats": {
+          "rangedAttackBonus": -1,
+          "magicAttackBonus": -3,
+          "meleeDefenceBonus": 2
+        },
+        "equipRequirements": {
+          "Defence": 1
+        }
+      },
+      "melvorD:Iron_Platelegs": {
+        "uid": 947,
+        "name": "Iron Platelegs",
+        "className": "EquipmentItem",
+        "category": "Combat",
+        "type": "Armour",
+        "image": "assets/media/bank/armour_platelegs_iron.png",
+        "sellPrice": 21,
+        "sellCurrency": "GP",
+        "equipmentSlot": [
+          "Platelegs"
+        ],
+        "tier": "iron",
+        "equipmentStats": {
+          "rangedAttackBonus": -7,
+          "magicAttackBonus": -21,
+          "meleeDefenceBonus": 11,
+          "rangedDefenceBonus": 10,
+          "magicDefenceBonus": -4
+        },
+        "equipRequirements": {
+          "Defence": 1
+        }
+      },
+      "melvorD:Iron_Platebody": {
+        "uid": 948,
+        "name": "Iron Platebody",
+        "className": "EquipmentItem",
+        "category": "Combat",
+        "type": "Armour",
+        "image": "assets/media/bank/armour_platebody_iron.png",
+        "sellPrice": 32,
+        "sellCurrency": "GP",
+        "equipmentSlot": [
+          "Platebody"
+        ],
+        "tier": "iron",
+        "equipmentStats": {
+          "rangedAttackBonus": -10,
+          "magicAttackBonus": -30,
+          "meleeDefenceBonus": 21,
+          "rangedDefenceBonus": 20,
+          "magicDefenceBonus": -6
+        },
+        "equipRequirements": {
+          "Defence": 1
+        }
+      },
+      "melvorD:Steel_Dagger": {
+        "uid": 949,
+        "name": "Steel Dagger",
+        "className": "WeaponItem",
+        "category": "Combat",
+        "type": "Weapon",
+        "image": "assets/media/bank/weapon_dagger_steel.png",
+        "sellPrice": 10,
+        "sellCurrency": "GP",
+        "equipmentSlot": [
+          "Weapon"
+        ],
+        "tier": "steel",
+        "equipmentStats": {
+          "attackSpeed": 2200,
+          "stabAttackBonus": 13,
+          "slashAttackBonus": 4,
+          "blockAttackBonus": 13,
+          "meleeStrengthBonus": 7,
+          "controlledAttackBonus": 10
+        },
+        "equipRequirements": {
+          "Attack": 5
+        }
+      },
+      "melvorD:Steel_Sword": {
+        "uid": 950,
+        "name": "Steel Sword",
+        "className": "WeaponItem",
+        "category": "Combat",
+        "type": "Weapon",
+        "image": "assets/media/bank/weapon_sword_steel.png",
+        "sellPrice": 10,
+        "sellCurrency": "GP",
+        "equipmentSlot": [
+          "Weapon"
+        ],
+        "tier": "steel",
+        "equipmentStats": {
+          "attackSpeed": 2400,
+          "stabAttackBonus": 16,
+          "slashAttackBonus": 6,
+          "blockAttackBonus": 4,
+          "meleeStrengthBonus": 12,
+          "controlledAttackBonus": 8.666666666666666
+        },
+        "equipRequirements": {
+          "Attack": 5
+        }
+      },
+      "melvorD:Steel_Battleaxe": {
+        "uid": 951,
+        "name": "Steel Battleaxe",
+        "className": "WeaponItem",
+        "category": "Combat",
+        "type": "Weapon",
+        "image": "assets/media/bank/weapon_battleaxe_steel.png",
+        "sellPrice": 25,
+        "sellCurrency": "GP",
+        "equipmentSlot": [
+          "Weapon"
+        ],
+        "tier": "steel",
+        "equipmentStats": {
+          "attackSpeed": 3100,
+          "stabAttackBonus": -2,
+          "slashAttackBonus": 8,
+          "blockAttackBonus": 8,
+          "meleeStrengthBonus": 35,
+          "controlledAttackBonus": 4.666666666666667
+        },
+        "equipRequirements": {
+          "Attack": 5
+        }
+      },
+      "LINE70347melvorItA:Voidfire_Firemaking_Oil": {
+        "uid": 8770,
+        "name": "Voidfire Firemaking Oil",
+        "className": "FiremakingOilItem",
+        "category": "Firemaking",
+        "type": "Oil",
+        "image": "assets/media/bank/Voidfire_Firemaking_Oil.png",
+        "sellPrice": 30,
+        "sellCurrency": "AbyssalPieces"
+      }
+    }
+  }
