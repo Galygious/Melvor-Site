@@ -4,7 +4,38 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Melvor Items Viewer with Pagination</title>
-  <link href="style.css" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'melvor-bg': '#1F2937',
+            'melvor-surface': '#374151',
+            'melvor-hover': '#4B5563',
+            'melvor-accent': '#60A5FA'
+          },
+          gridTemplateColumns: {
+            '18': 'repeat(18, minmax(0, 1fr))',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .line-clamp-1 {
+      display: -webkit-box;
+      -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+  </style>
 </head>
 <body class="bg-melvor-bg text-white min-h-screen p-6">
   <h1 class="text-3xl font-bold mb-8 text-center">Melvor Items Viewer</h1>
