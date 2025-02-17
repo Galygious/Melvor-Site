@@ -329,7 +329,7 @@
             let content = `
               <h3 class="font-semibold text-xs mb-1 line-clamp-2 h-8 px-0.5 group-hover:text-white transition-colors duration-200">${item.name}</h3>
               ${item.image && item.image.dataUrlGrid 
-                ? `<div class="m:size-32 l:size-24 flex items-center justify-center mb-1 bg-melvor-bg rounded p-0.5">
+                ? `<div class="size-auto flex items-center justify-center mb-1 bg-melvor-bg rounded p-0.5">
                      <img src="${item.image.dataUrlGrid}" alt="${item.name}" class="max-w-full max-h-full object-contain">
                    </div>`
                 : '<div class="w-10 h-10 bg-melvor-bg rounded mb-1 flex items-center justify-center"><svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg></div>'}
