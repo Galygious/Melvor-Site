@@ -4,24 +4,27 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Melvor Items Viewer with Pagination</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            'melvor-bg': '#1a1f2e',
-            'melvor-surface': '#2a2f3e',
-            'melvor-accent': '#4a7dff',
-            'melvor-hover': '#3a3f4e'
-          }
-        }
-      }
-    }
-  </script>
+  <link href="./style.css" rel="stylesheet">
 </head>
 <body class="bg-melvor-bg text-white min-h-screen p-6">
   <h1 class="text-3xl font-bold mb-8 text-center">Melvor Items Viewer</h1>
+  
+  <!-- Loading Overlay -->
+  <div id="loading" class="fixed inset-0 bg-melvor-bg bg-opacity-90 flex items-center justify-center z-50">
+    <div class="text-center">
+      <div class="w-16 h-16 border-4 border-melvor-accent border-t-transparent rounded-full animate-spin mb-4"></div>
+      <div class="text-lg text-white mb-2">Loading items...</div>
+      <div class="text-sm text-gray-400" id="loadingProgress">Initializing...</div>
+    </div>
+  </div>
+
+  <!-- Background loading indicator for additional operations -->
+  <div id="bgLoading" class="fixed bottom-4 right-4 bg-melvor-surface rounded-lg p-3 shadow-lg hidden">
+    <div class="flex items-center gap-2">
+      <div class="w-4 h-4 border-2 border-melvor-accent border-t-transparent rounded-full animate-spin"></div>
+      <span class="text-sm text-white">Loading additional images...</span>
+    </div>
+  </div>
   
   <!-- Navigation Section -->
   <div class="flex flex-wrap gap-4 mb-6">
@@ -78,106 +81,94 @@
   </div>
 
   <script>
-    // Create loading overlay
-    document.addEventListener('DOMContentLoaded', async () => {
-      // Create loading overlay with progress
-      const loadingEl = document.createElement('div');
-      loadingEl.id = 'loading';
-      loadingEl.className = 'fixed inset-0 bg-melvor-bg bg-opacity-90 flex items-center justify-center z-50';
-      loadingEl.innerHTML = `
-        <div class="text-center">
-          <div class="w-16 h-16 border-4 border-melvor-accent border-t-transparent rounded-full animate-spin mb-4"></div>
-          <div class="text-lg text-white mb-2">Loading items...</div>
-          <div class="text-sm text-gray-400" id="loadingProgress">Initializing...</div>
-        </div>
-      `;
-      document.body.appendChild(loadingEl);
-      
-      // Prevent interactions while loading
-      document.body.style.pointerEvents = 'none';
+    // Image cache
+    const imageCache = new Map();
+    let isPreloadingAll = false;
 
-      // Background loading indicator
-      const bgLoadingEl = document.createElement('div');
-      bgLoadingEl.id = 'bgLoading';
-      bgLoadingEl.className = 'fixed bottom-4 right-4 bg-melvor-surface rounded-lg p-3 shadow-lg hidden';
-      bgLoadingEl.innerHTML = `
-        <div class="flex items-center gap-2">
-          <div class="w-4 h-4 border-2 border-melvor-accent border-t-transparent rounded-full animate-spin"></div>
-          <span class="text-sm text-white">Loading additional images...</span>
-        </div>
-      `;
-      document.body.appendChild(bgLoadingEl);
-      
-      // Initialize page
+    // Load and cache an image
+    async function loadImage(src) {
+      if (imageCache.has(src)) {
+        return imageCache.get(src);
+      }
+
+      const promise = new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(src);
+        img.onerror = reject;
+        img.src = src;
+      });
+
+      imageCache.set(src, promise);
+      return promise;
+    }
+
+    // Load images directly
+    async function loadImages(items) {
+      items.forEach(item => {
+        if (item.image && typeof item.image === 'string') {
+          const imgPath = item.image;
+          item.image = {
+            dataUrlGrid: imgPath,
+            dataUrlModal: imgPath
+          };
+        }
+      });
+      return Promise.resolve();
+    }
+
+    // Background task to preload all pages
+    async function preloadAllPages(items, pageSize) {
+      if (isPreloadingAll) return;
+      isPreloadingAll = true;
+
+      const bgLoading = document.getElementById('bgLoading');
+      const totalPages = Math.ceil(items.length / pageSize);
+      let loadedPages = 0;
+
       try {
-        // Fetch the JSON data
-        const response = await fetch('public/items.json');
+        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+          const start = (pageNum - 1) * pageSize;
+          const end = pageNum * pageSize;
+          const pageItems = items.slice(start, end);
+
+          // Show loading indicator with progress
+          bgLoading.classList.remove('hidden');
+          bgLoading.querySelector('span').textContent = 
+            `Loading additional images (${Math.round((loadedPages / totalPages) * 100)}%)`;
+
+          // Preload all images for this page
+          const imagePromises = pageItems
+            .filter(item => item.image && item.image.dataUrlGrid)
+            .flatMap(item => [
+              loadImage(item.image.dataUrlGrid),
+              loadImage(item.image.dataUrlModal)
+            ]);
+
+          await Promise.all(imagePromises);
+          loadedPages++;
+
+          // Allow other tasks to run
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+      } catch (error) {
+        console.error('Error preloading all images:', error);
+      } finally {
+        isPreloadingAll = false;
+        bgLoading.classList.add('hidden');
+      }
+    }
+
+    // --- Main Application Code ---
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        // Fetch JSON data.
+        const response = await fetch('public/updated_items.json');
         const gameData = await response.json();
 
-        // Define constants
+        // Define constants.
         const pageSize = 180;
-        const imageCache = new Map();
 
-        // Function to preload a single image
-        function preloadImage(url) {
-          if (imageCache.has(url)) {
-            return imageCache.get(url);
-          }
-
-          const promise = new Promise((resolve) => {
-            const img = new Image();
-            img.onload = () => resolve(url);
-            img.onerror = () => resolve(url); // Still resolve on error
-            img.src = url;
-          });
-
-          imageCache.set(url, promise);
-          return promise;
-        }
-
-        // Function to preload images for specific pages
-        async function preloadImagesForPages(items, updateProgress) {
-          const imageUrls = items.filter(item => item.image).map(item => item.image.replace('assets/', 'assets_web/').replace('.png', '.webp'));
-          const total = imageUrls.length;
-          let loaded = 0;
-
-          const promises = imageUrls.map(async url => {
-            await preloadImage(url);
-            loaded++;
-            if (updateProgress) {
-              updateProgress(loaded, total);
-            }
-          });
-
-          await Promise.all(promises);
-        }
-
-        // Function to preload images for surrounding pages
-        async function preloadSurroundingPages() {
-          const totalPages = Math.ceil(filteredItems.length / pageSize);
-          const pagesToPreload = [currentPage - 1, currentPage + 1]; // Previous and next pages
-          
-          for (const pageNum of pagesToPreload) {
-            if (pageNum > 0 && pageNum <= totalPages) {
-              const start = (pageNum - 1) * pageSize;
-              const end = start + pageSize;
-              const pageItems = filteredItems.slice(start, end);
-              
-              // Only preload if any images aren't cached
-              if (pageItems.some(item => item.image && !imageCache.has(item.image.replace('assets/', 'assets_web/').replace('.png', '.webp')))) {
-                // Preload in background without showing loading indicator
-                await preloadImagesForPages(pageItems);
-              }
-            }
-          }
-        }
-
-        // Function to check if all images for items are cached
-        function areImagesCached(items) {
-          return items.every(item => !item.image || imageCache.has(item.image.replace('assets/', 'assets_web/').replace('.png', '.webp')));
-        }
-
-        // Combine items from all namespaces into a single array
+        // Combine items from all namespaces into a single array.
         const allItems = [];
         for (const ns in gameData) {
           for (const itemKey in gameData[ns]) {
@@ -189,18 +180,18 @@
           }
         }
 
-        // Preload first two pages of images
-        const initialItems = allItems.slice(0, pageSize * 2);
-        const progressEl = document.getElementById('loadingProgress');
-        await preloadImagesForPages(initialItems, (loaded, total) => {
-          const percentage = Math.round((loaded / total) * 100);
-          progressEl.textContent = `Loading initial images... ${percentage}%`;
-        });
-
-        // Remove loading indicator and enable page interactions
+        // Show loading overlay and prepare images.
+        const loadingEl = document.getElementById('loading');
+        const loadingProgressEl = document.getElementById('loadingProgress');
+        loadingProgressEl.textContent = 'Loading images...';
+        await loadImages(allItems);
+        // Remove the loading overlay.
         loadingEl.remove();
-        document.body.style.pointerEvents = 'auto';
 
+        // Start background preloading of all pages
+        preloadAllPages(allItems, pageSize);
+
+        // Get UI elements.
         const itemsContainer = document.getElementById('itemsContainer');
         const searchInput = document.getElementById('searchInput');
         const paginationContainer = document.getElementById('paginationContainer');
@@ -209,9 +200,9 @@
         const closeDetails = document.getElementById('closeDetails');
 
         let currentPage = 1;
-        let filteredItems = allItems.slice(); // Starts as a copy of allItems
-        
-        // Populate category filter
+        let filteredItems = allItems.slice(); // Copy of allItems.
+
+        // Populate category filter.
         const categories = [...new Set(allItems.map(item => item.category))].filter(Boolean).sort();
         const categoryFilter = document.getElementById('categoryFilter');
         categories.forEach(category => {
@@ -221,7 +212,7 @@
           categoryFilter.appendChild(option);
         });
 
-        // Populate equipment slot filter
+        // Populate equipment slot filter.
         const slots = [...new Set(allItems.flatMap(item => item.equipmentSlot || []))].filter(Boolean).sort();
         const slotFilter = document.getElementById('slotFilter');
         slots.forEach(slot => {
@@ -231,12 +222,11 @@
           slotFilter.appendChild(option);
         });
 
-        // Sort function
+        // Sorting function.
         function sortItems(items, sortBy) {
           const [field, direction] = sortBy.split('-');
           return [...items].sort((a, b) => {
             let valueA, valueB;
-            
             switch(field) {
               case 'name':
                 valueA = a.name || '';
@@ -254,24 +244,20 @@
                 valueA = a[field] || '';
                 valueB = b[field] || '';
             }
-
             if (typeof valueA === 'number' && typeof valueB === 'number') {
               return direction === 'asc' ? valueA - valueB : valueB - valueA;
             }
-            
             return direction === 'asc' 
               ? valueA.toString().localeCompare(valueB.toString())
               : valueB.toString().localeCompare(valueA.toString());
           });
         }
 
-        // Filter function
+        // Filter function.
         function filterItems() {
           const searchQuery = searchInput.value.toLowerCase();
           const selectedCategory = categoryFilter.value;
           const selectedSlot = slotFilter.value;
-          
-          // First filter by search and category
           let tempFiltered = allItems.filter(item => {
             if (!item || !item.name) return false;
             const itemName = item.name.toLowerCase();
@@ -280,8 +266,6 @@
             const matchesCategory = !selectedCategory || itemCategory === selectedCategory;
             return matchesSearch && matchesCategory;
           });
-
-          // Then filter by slot and ensure uniqueness
           if (selectedSlot) {
             const seen = new Set();
             filteredItems = tempFiltered.filter(item => {
@@ -292,7 +276,6 @@
               return true;
             });
           } else {
-            // If no slot filter, just ensure uniqueness by name
             const seen = new Set();
             filteredItems = tempFiltered.filter(item => {
               if (seen.has(item.name)) return false;
@@ -300,301 +283,290 @@
               return true;
             });
           }
-
           const sortBy = document.getElementById('sortSelect').value;
           filteredItems = sortItems(filteredItems, sortBy);
-          
           currentPage = 1;
           renderCurrentPage();
         }
 
-    // Render a subset of items on the current page
-    async function renderItems(items) {
-      itemsContainer.innerHTML = '';
-      
-      // Only show loading indicator and preload if images aren't cached
-      if (!areImagesCached(items)) {
-        bgLoadingEl.classList.remove('hidden');
-        await preloadImagesForPages(items);
-        bgLoadingEl.classList.add('hidden');
-      }
-
-      // Start preloading surrounding pages in the background
-      preloadSurroundingPages();
-
-      items.forEach(item => {
-        const itemDiv = document.createElement('div');
-        itemDiv.className = 'bg-melvor-surface border border-gray-700 rounded-lg p-1.5 cursor-pointer transform transition-all duration-200 hover:bg-melvor-hover hover:scale-[1.02] hover:border-melvor-accent flex flex-col items-center text-center group';
-        
-        let content = `
-          <h3 class="font-semibold text-xs mb-1 line-clamp-2 h-8 px-0.5 group-hover:text-white transition-colors duration-200">${item.name}</h3>
-          ${item.image ? 
-            `<div class="w-15 h-15 flex items-center justify-center mb-1 bg-melvor-bg rounded p-0.5">
-              <img src="${item.image.replace('assets/', 'assets_web/').replace('.png', '.webp')}" alt="${item.name}" class="max-w-full max-h-full object-contain">
-             </div>` 
-            : '<div class="w-10 h-10 bg-melvor-bg rounded mb-1 flex items-center justify-center"><svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg></div>'}
-          ${item.category ? 
-            `<span class="text-[10px] text-gray-400 line-clamp-1 px-0.5 group-hover:text-gray-300 transition-colors duration-200">${item.category}</span>` 
-            : ''}
-        `;
-        
-        itemDiv.innerHTML = content;
-        itemDiv.addEventListener('click', () => showItemDetails(item));
-        itemsContainer.appendChild(itemDiv);
-      });
-    }
-
-    // Render pagination controls based on filteredItems length.
-    function renderPagination() {
-      const paginationContainer = document.getElementById('paginationContainer');
-      const prevButton = document.getElementById('prevButton');
-      const nextButton = document.getElementById('nextButton');
-      const totalPages = Math.ceil(filteredItems.length / pageSize);
-      
-      if (totalPages <= 1) {
-        paginationContainer.parentElement.parentElement.classList.add('hidden');
-        return;
-      } else {
-        paginationContainer.parentElement.parentElement.classList.remove('hidden');
-      }
-
-      // Update prev/next buttons
-      prevButton.disabled = currentPage === 1;
-      prevButton.classList.toggle('opacity-50', currentPage === 1);
-      prevButton.onclick = () => {
-        if (currentPage > 1) {
-          currentPage--;
-          renderCurrentPage();
+        // Render items on the current page.
+        async function renderItems(items) {
+          itemsContainer.innerHTML = '';
+          items.forEach(item => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'bg-melvor-surface border border-gray-700 rounded-lg p-1.5 cursor-pointer transform transition-all duration-200 hover:bg-melvor-hover hover:scale-[1.02] hover:border-melvor-accent flex flex-col items-center text-center group';
+            let content = `
+              <h3 class="font-semibold text-xs mb-1 line-clamp-2 h-8 px-0.5 group-hover:text-white transition-colors duration-200">${item.name}</h3>
+              ${item.image && item.image.dataUrlGrid 
+                ? `<div class="w-32 h-32 flex items-center justify-center mb-1 bg-melvor-bg rounded p-0.5">
+                     <img src="${item.image.dataUrlGrid}" alt="${item.name}" class="max-w-full max-h-full object-contain">
+                   </div>`
+                : '<div class="w-10 h-10 bg-melvor-bg rounded mb-1 flex items-center justify-center"><svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg></div>'}
+              ${item.category 
+                ? `<span class="text-[10px] text-gray-400 line-clamp-1 px-0.5 group-hover:text-gray-300 transition-colors duration-200">${item.category}</span>`
+                : ''
+              }
+            `;
+            itemDiv.innerHTML = content;
+            itemDiv.addEventListener('click', () => showItemDetails(item));
+            itemsContainer.appendChild(itemDiv);
+          });
         }
-      };
 
-      nextButton.disabled = currentPage === totalPages;
-      nextButton.classList.toggle('opacity-50', currentPage === totalPages);
-      nextButton.onclick = () => {
-        if (currentPage < totalPages) {
-          currentPage++;
-          renderCurrentPage();
+        // Render pagination controls.
+        function renderPagination() {
+          const paginationContainer = document.getElementById('paginationContainer');
+          const prevButton = document.getElementById('prevButton');
+          const nextButton = document.getElementById('nextButton');
+          const totalPages = Math.ceil(filteredItems.length / pageSize);
+          if (totalPages <= 1) {
+            paginationContainer.parentElement.parentElement.classList.add('hidden');
+            return;
+          } else {
+            paginationContainer.parentElement.parentElement.classList.remove('hidden');
+          }
+          prevButton.disabled = currentPage === 1;
+          prevButton.classList.toggle('opacity-50', currentPage === 1);
+          prevButton.onclick = () => {
+            if (currentPage > 1) {
+              currentPage--;
+              renderCurrentPage();
+            }
+          };
+          nextButton.disabled = currentPage === totalPages;
+          nextButton.classList.toggle('opacity-50', currentPage === totalPages);
+          nextButton.onclick = () => {
+            if (currentPage < totalPages) {
+              currentPage++;
+              renderCurrentPage();
+            }
+          };
+          paginationContainer.innerHTML = '';
+          const createPageButton = (pageNum) => {
+            const button = document.createElement('button');
+            button.className = `min-w-[36px] sm:min-w-[44px] h-8 sm:h-10 flex items-center justify-center rounded-lg transition-all duration-200 px-1 sm:px-2 text-sm sm:text-base ${
+              pageNum === currentPage 
+                ? 'bg-melvor-accent text-white scale-110' 
+                : 'bg-melvor-surface text-gray-400 hover:bg-melvor-hover hover:text-white hover:scale-105'
+            }`;
+            button.textContent = pageNum;
+            button.onclick = () => {
+              currentPage = pageNum;
+              renderCurrentPage();
+            };
+            return button;
+          };
+          for (let i = 1; i <= totalPages; i++) {
+            paginationContainer.appendChild(createPageButton(i));
+          }
+          const container = paginationContainer.parentElement;
+          const buttonWidth = 46;
+          if ('ontouchstart' in window) {
+            container.classList.add('overflow-x-auto', 'touch-pan-x', 'overscroll-x-contain');
+            paginationContainer.classList.add('min-w-max');
+            const scrollPos = (currentPage - 1) * buttonWidth - (container.offsetWidth / 2) + (buttonWidth / 2);
+            container.scrollLeft = Math.max(0, scrollPos);
+          } else {
+            let isDragging = false;
+            let startX = 0;
+            let scrollLeft = 0;
+            container.addEventListener('mousedown', (e) => {
+              isDragging = true;
+              startX = e.pageX - container.offsetLeft;
+              scrollLeft = Math.abs(parseInt(paginationContainer.style.transform?.match(/-?\d+/)?.[0] || 0));
+              container.style.cursor = 'grabbing';
+            });
+            container.addEventListener('mousemove', (e) => {
+              if (!isDragging) return;
+              e.preventDefault();
+              const x = e.pageX - container.offsetLeft;
+              const walk = (startX - x) * 2;
+              const maxScroll = Math.max(0, (totalPages * buttonWidth) - container.offsetWidth + (buttonWidth * 2));
+              const newScroll = Math.max(0, Math.min(scrollLeft + walk, maxScroll));
+              paginationContainer.style.transform = `translateX(-${newScroll}px)`;
+            });
+            container.addEventListener('mouseup', () => {
+              isDragging = false;
+              container.style.cursor = '';
+            });
+            container.addEventListener('mouseleave', () => {
+              isDragging = false;
+              container.style.cursor = '';
+            });
+            container.addEventListener('wheel', (e) => {
+              e.preventDefault();
+              const scrollSpeed = 3;
+              const scrollAmount = (e.deltaY > 0 ? 1 : -1) * scrollSpeed * buttonWidth;
+              const maxScroll = Math.max(0, (totalPages * buttonWidth) - container.offsetWidth + (buttonWidth * 2));
+              const currentScroll = Math.abs(parseInt(paginationContainer.style.transform?.match(/-?\d+/)?.[0] || 0));
+              const newScroll = Math.max(0, Math.min(currentScroll + scrollAmount, maxScroll));
+              paginationContainer.style.transform = `translateX(-${newScroll}px)`;
+            }, { passive: false });
+            const maxScroll = Math.max(0, (totalPages * buttonWidth) - container.offsetWidth + (buttonWidth * 2));
+            const initialScrollPos = (currentPage - 1) * buttonWidth - (container.offsetWidth / 2) + (buttonWidth / 2);
+            const centeredScrollPos = Math.max(0, Math.min(initialScrollPos, maxScroll));
+            paginationContainer.style.transform = `translateX(-${centeredScrollPos}px)`;
+            container.style.cursor = 'grab';
+          }
         }
-      };
 
-      // Create page buttons
-      paginationContainer.innerHTML = '';
-      const createPageButton = (pageNum) => {
-        const button = document.createElement('button');
-        button.className = `min-w-[36px] sm:min-w-[44px] h-8 sm:h-10 flex items-center justify-center rounded-lg transition-all duration-200 px-1 sm:px-2 text-sm sm:text-base ${
-          pageNum === currentPage 
-            ? 'bg-melvor-accent text-white scale-110' 
-            : 'bg-melvor-surface text-gray-400 hover:bg-melvor-hover hover:text-white hover:scale-105'
-        }`;
-        button.textContent = pageNum;
-        button.onclick = () => {
-          currentPage = pageNum;
-          renderCurrentPage();
-        };
-        return button;
-      };
+        // Get items for a specific page.
+        function getItemsForPage(pageNum) {
+          const start = (pageNum - 1) * pageSize;
+          const end = pageNum * pageSize;
+          return filteredItems.slice(start, end);
+        }
 
-      // Create all page buttons
-      for (let i = 1; i <= totalPages; i++) {
-        paginationContainer.appendChild(createPageButton(i));
-      }
+        // Preload images for a page
+        async function preloadPage(pageNum, includeModal = false) {
+          const items = getItemsForPage(pageNum);
+          const imagePromises = items
+            .filter(item => item.image && item.image.dataUrlGrid)
+            .flatMap(item => {
+              const promises = [loadImage(item.image.dataUrlGrid)];
+              if (includeModal && item.image.dataUrlModal) {
+                promises.push(loadImage(item.image.dataUrlModal));
+              }
+              return promises;
+            });
+          return Promise.all(imagePromises);
+        }
 
-      // Add scroll event listeners
-      const container = paginationContainer.parentElement;
-      const buttonWidth = 46;
+        // Preload surrounding pages
+        async function preloadSurroundingPages() {
+          const bgLoading = document.getElementById('bgLoading');
+          bgLoading.classList.remove('hidden');
+          
+          try {
+            // Preload current page modal images and surrounding pages
+            const preloadPromises = [
+              preloadPage(currentPage, true) // Current page with modal images
+            ];
+            if (currentPage > 1) {
+              preloadPromises.push(preloadPage(currentPage - 1));
+            }
+            if (currentPage < Math.ceil(filteredItems.length / pageSize)) {
+              preloadPromises.push(preloadPage(currentPage + 1));
+            }
+            await Promise.all(preloadPromises);
+          } catch (error) {
+            console.error('Error preloading images:', error);
+          } finally {
+            bgLoading.classList.add('hidden');
+          }
+        }
 
-      // Handle touch scrolling on mobile
-      if ('ontouchstart' in window) {
-        container.classList.add('overflow-x-auto', 'touch-pan-x', 'overscroll-x-contain');
-        paginationContainer.classList.add('min-w-max');
-        const scrollPos = (currentPage - 1) * buttonWidth - (container.offsetWidth / 2) + (buttonWidth / 2);
-        container.scrollLeft = Math.max(0, scrollPos);
-      } else {
-        // Handle desktop scrolling
-        let isDragging = false;
-        let startX = 0;
-        let scrollLeft = 0;
+        // Render current page.
+        function renderCurrentPage() {
+          const currentItems = getItemsForPage(currentPage);
+          renderItems(currentItems);
+          renderPagination();
+          // Start preloading after rendering
+          preloadSurroundingPages();
+        }
 
-        container.addEventListener('mousedown', (e) => {
-          isDragging = true;
-          startX = e.pageX - container.offsetLeft;
-          scrollLeft = Math.abs(parseInt(paginationContainer.style.transform?.match(/-?\d+/)?.[0] || 0));
-          container.style.cursor = 'grabbing';
-        });
-
-        container.addEventListener('mousemove', (e) => {
-          if (!isDragging) return;
-          e.preventDefault();
-          const x = e.pageX - container.offsetLeft;
-          const walk = (startX - x) * 2;
-          const maxScroll = Math.max(0, (totalPages * buttonWidth) - container.offsetWidth + (buttonWidth * 2));
-          const newScroll = Math.max(0, Math.min(scrollLeft + walk, maxScroll));
-          paginationContainer.style.transform = `translateX(-${newScroll}px)`;
-        });
-
-        container.addEventListener('mouseup', () => {
-          isDragging = false;
-          container.style.cursor = '';
-        });
-
-        container.addEventListener('mouseleave', () => {
-          isDragging = false;
-          container.style.cursor = '';
-        });
-
-        container.addEventListener('wheel', (e) => {
-          e.preventDefault();
-          const scrollSpeed = 3;
-          const scrollAmount = (e.deltaY > 0 ? 1 : -1) * scrollSpeed * buttonWidth;
-          const maxScroll = Math.max(0, (totalPages * buttonWidth) - container.offsetWidth + (buttonWidth * 2));
-          const currentScroll = Math.abs(parseInt(paginationContainer.style.transform?.match(/-?\d+/)?.[0] || 0));
-          const newScroll = Math.max(0, Math.min(currentScroll + scrollAmount, maxScroll));
-          paginationContainer.style.transform = `translateX(-${newScroll}px)`;
-        }, { passive: false });
-
-        // Center current page on desktop
-        const maxScroll = Math.max(0, (totalPages * buttonWidth) - container.offsetWidth + (buttonWidth * 2));
-        const initialScrollPos = (currentPage - 1) * buttonWidth - (container.offsetWidth / 2) + (buttonWidth / 2);
-        const centeredScrollPos = Math.max(0, Math.min(initialScrollPos, maxScroll));
-        paginationContainer.style.transform = `translateX(-${centeredScrollPos}px)`;
-
-        // Add grab cursor
-        container.style.cursor = 'grab';
-      }
-    }
-
-    // Calculate and render the current page of items.
-    function renderCurrentPage() {
-      const start = (currentPage - 1) * pageSize;
-      const end = currentPage * pageSize;
-      const currentItems = filteredItems.slice(start, end);
-      renderItems(currentItems);
-      renderPagination();
-    }
-
-    // Show detailed information about an item in a modal.
-    function showItemDetails(item) {
-      let html = `
-        <div class="flex flex-col sm:flex-row gap-4 sm:gap-6 overflow-hidden">
-          ${item.image ? `
-            <div class="flex-shrink-0 mx-auto sm:mx-0">
-              <img src="${item.image.replace('assets/', 'assets_web/').replace('.png', '.webp')}" alt="${item.name}" class="w-20 h-20 sm:w-24 sm:h-24 object-contain bg-melvor-bg rounded-lg p-2">
-            </div>
-          ` : ''}
-          <div class="flex-grow text-center sm:text-left">
-            <h2 class="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">${item.name}</h2>
-            
-            <!-- Basic Info -->
-            <div class="space-y-3">
-              ${item.className ? `<p><span class="text-gray-400">Class:</span> ${item.className}</p>` : ''}
-              ${item.category ? `<p><span class="text-gray-400">Category:</span> ${item.category}</p>` : ''}
-              ${item.type ? `<p><span class="text-gray-400">Type:</span> ${item.type}</p>` : ''}
-              ${item.tier ? `<p><span class="text-gray-400">Tier:</span> ${item.tier}</p>` : ''}
-              ${item.equipmentSlot ? `
-                <p><span class="text-gray-400">Equipment Slots:</span> ${item.equipmentSlot.map(slot => 
-                  slot.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-                ).join(', ')}</p>
-              ` : ''}
-              ${item.description ? `<p><span class="text-gray-400">Description:</span> ${item.description}</p>` : ''}
-              ${item.sellPrice ? `
-                <p><span class="text-gray-400">Sell Price:</span> ${item.sellPrice} ${item.sellCurrency || ''}</p>
-              ` : ''}
-              ${item.soulPoints ? `<p><span class="text-gray-400">Soul Points:</span> ${item.soulPoints}</p>` : ''}
-            </div>
-
-            <!-- Equipment Stats -->
-            ${item.equipmentStats ? `
-              <div class="mt-4 sm:mt-6">
-                <h3 class="text-lg sm:text-xl font-semibold mb-2 sm:mb-3">Equipment Stats</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  ${Object.entries(item.equipmentStats).map(([stat, value]) => `
-                    <div class="bg-melvor-bg rounded-lg p-3">
-                      <span class="text-gray-400">${stat.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span> ${value}
-                    </div>
-                  `).join('')}
+        // Show item details in modal.
+        function showItemDetails(item) {
+          let html = `
+            <div class="flex flex-col sm:flex-row gap-4 sm:gap-6 overflow-hidden">
+              ${item.image && item.image.dataUrlModal ? `
+                <div class="flex-shrink-0 mx-auto sm:mx-0">
+                  <div class="w-20 h-20 sm:w-24 sm:h-24 bg-melvor-bg rounded-lg p-2 flex items-center justify-center">
+                    <img src="${item.image.dataUrlModal}" alt="${item.name}" class="max-w-full max-h-full object-contain">
+                  </div>
                 </div>
-              </div>
-            ` : ''}
-
-            <!-- Equipment Requirements -->
-            ${item.equipRequirements ? `
-              <div class="mt-4 sm:mt-6">
-                <h3 class="text-lg sm:text-xl font-semibold mb-2 sm:mb-3">Requirements</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  ${Object.entries(item.equipRequirements).map(([skill, level]) => `
-                    <div class="bg-melvor-bg rounded-lg p-3">
-                      <span class="text-gray-400">${skill.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span> Level ${level}
-                    </div>
-                  `).join('')}
-                </div>
-              </div>
-            ` : ''}
-
-            <!-- Special Attacks -->
-            ${item.specialAttacks ? `
-              <div class="mt-4 sm:mt-6">
-                <h3 class="text-lg sm:text-xl font-semibold mb-2 sm:mb-3">Special Attacks</h3>
+              ` : ''}
+              <div class="flex-grow text-center sm:text-left">
+                <h2 class="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">${item.name}</h2>
                 <div class="space-y-3">
-                  ${Object.entries(item.specialAttacks).map(([name, attack]) => `
-                    <div class="bg-melvor-bg rounded-lg p-3">
-                      <h4 class="font-semibold text-white mb-2">${name}</h4>
-                      <div class="space-y-2 text-sm">
-                        ${attack.description ? `<p><span class="text-gray-400">Effect:</span> ${attack.description}</p>` : ''}
-                        ${attack.chance ? `<p><span class="text-gray-400">Chance:</span> ${attack.chance * 100}%</p>` : ''}
-                        ${attack.attackCount ? `<p><span class="text-gray-400">Attack Count:</span> ${attack.attackCount}</p>` : ''}
-                        ${attack.attackInterval ? `<p><span class="text-gray-400">Attack Interval:</span> ${attack.attackInterval}ms</p>` : ''}
-                        ${attack.lifesteal ? `<p><span class="text-gray-400">Lifesteal:</span> ${attack.lifesteal * 100}%</p>` : ''}
-                      </div>
-                    </div>
-                  `).join('')}
+                  ${item.className ? `<p><span class="text-gray-400">Class:</span> ${item.className}</p>` : ''}
+                  ${item.category ? `<p><span class="text-gray-400">Category:</span> ${item.category}</p>` : ''}
+                  ${item.type ? `<p><span class="text-gray-400">Type:</span> ${item.type}</p>` : ''}
+                  ${item.tier ? `<p><span class="text-gray-400">Tier:</span> ${item.tier}</p>` : ''}
+                  ${item.equipmentSlot ? `
+                    <p><span class="text-gray-400">Equipment Slots:</span> ${item.equipmentSlot.map(slot => slot.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())).join(', ')}</p>
+                  ` : ''}
+                  ${item.description ? `<p><span class="text-gray-400">Description:</span> ${item.description}</p>` : ''}
+                  ${item.sellPrice ? `<p><span class="text-gray-400">Sell Price:</span> ${item.sellPrice} ${item.sellCurrency || ''}</p>` : ''}
+                  ${item.soulPoints ? `<p><span class="text-gray-400">Soul Points:</span> ${item.soulPoints}</p>` : ''}
                 </div>
+                ${item.equipmentStats ? `
+                  <div class="mt-4 sm:mt-6">
+                    <h3 class="text-lg sm:text-xl font-semibold mb-2 sm:mb-3">Equipment Stats</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      ${Object.entries(item.equipmentStats).map(([stat, value]) => `
+                        <div class="bg-melvor-bg rounded-lg p-3">
+                          <span class="text-gray-400">${stat.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span> ${value}
+                        </div>
+                      `).join('')}
+                    </div>
+                  </div>
+                ` : ''}
+                ${item.equipRequirements ? `
+                  <div class="mt-4 sm:mt-6">
+                    <h3 class="text-lg sm:text-xl font-semibold mb-2 sm:mb-3">Requirements</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      ${Object.entries(item.equipRequirements).map(([skill, level]) => `
+                        <div class="bg-melvor-bg rounded-lg p-3">
+                          <span class="text-gray-400">${skill.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span> Level ${level}
+                        </div>
+                      `).join('')}
+                    </div>
+                  </div>
+                ` : ''}
+                ${item.specialAttacks ? `
+                  <div class="mt-4 sm:mt-6">
+                    <h3 class="text-lg sm:text-xl font-semibold mb-2 sm:mb-3">Special Attacks</h3>
+                    <div class="space-y-3">
+                      ${Object.entries(item.specialAttacks).map(([name, attack]) => `
+                        <div class="bg-melvor-bg rounded-lg p-3">
+                          <h4 class="font-semibold text-white mb-2">${name}</h4>
+                          <div class="space-y-2 text-sm">
+                            ${attack.description ? `<p><span class="text-gray-400">Effect:</span> ${attack.description}</p>` : ''}
+                            ${attack.chance ? `<p><span class="text-gray-400">Chance:</span> ${attack.chance * 100}%</p>` : ''}
+                            ${attack.attackCount ? `<p><span class="text-gray-400">Attack Count:</span> ${attack.attackCount}</p>` : ''}
+                            ${attack.attackInterval ? `<p><span class="text-gray-400">Attack Interval:</span> ${attack.attackInterval}ms</p>` : ''}
+                            ${attack.lifesteal ? `<p><span class="text-gray-400">Lifesteal:</span> ${attack.lifesteal * 100}%</p>` : ''}
+                          </div>
+                        </div>
+                      `).join('')}
+                    </div>
+                  </div>
+                ` : ''}
               </div>
-            ` : ''}
-          </div>
-        </div>
-      `;
-      
-      detailsContent.innerHTML = html;
-      itemDetails.classList.remove('hidden');
-      
-      // Add animation after a small delay
-      setTimeout(() => {
-        itemDetails.querySelector('.bg-melvor-surface').classList.remove('scale-95', 'opacity-0');
-      }, 10);
-    }
+            </div>
+          `;
+          detailsContent.innerHTML = html;
+          itemDetails.classList.remove('hidden');
+          setTimeout(() => {
+            itemDetails.querySelector('.bg-melvor-surface').classList.remove('scale-95', 'opacity-0');
+          }, 10);
+        }
 
-    // Function to close the modal with animation
-    function closeModal() {
-      const modal = itemDetails.querySelector('.bg-melvor-surface');
-      modal.classList.add('scale-95', 'opacity-0');
-      setTimeout(() => {
-        itemDetails.classList.add('hidden');
-      }, 300);
-    }
+        function closeModal() {
+          const modal = itemDetails.querySelector('.bg-melvor-surface');
+          modal.classList.add('scale-95', 'opacity-0');
+          setTimeout(() => {
+            itemDetails.classList.add('hidden');
+          }, 300);
+        }
 
-    // Close the modal when the close button is clicked
-    closeDetails.addEventListener('click', closeModal);
+        closeDetails.addEventListener('click', closeModal);
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && !itemDetails.classList.contains('hidden')) {
+            closeModal();
+          }
+        });
 
-    // Close the modal when Escape key is pressed
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !itemDetails.classList.contains('hidden')) {
-        closeModal();
-      }
-    });
+        // Event listeners for filters.
+        searchInput.addEventListener('input', filterItems);
+        categoryFilter.addEventListener('change', filterItems);
+        slotFilter.addEventListener('change', filterItems);
+        document.getElementById('sortSelect').addEventListener('change', filterItems);
 
-    // Event listeners for filters and sorting
-    searchInput.addEventListener('input', filterItems);
-    categoryFilter.addEventListener('change', filterItems);
-    slotFilter.addEventListener('change', filterItems);
-    document.getElementById('sortSelect').addEventListener('change', filterItems);
-
-        // Initial render and preload
         renderCurrentPage();
-        // Preload second page in background
-        preloadSurroundingPages();
       } catch (error) {
         console.error('Error loading the JSON file:', error);
-        loadingEl.textContent = 'Error loading items. Please refresh.';
       }
     });
   </script>
